@@ -1,0 +1,5 @@
+numpy
+matplotlib
+scipy
+pyqt5
+pandas
