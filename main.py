@@ -116,6 +116,7 @@ print(f"n: {N_f.size}")
 print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
 # --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---
+#IL RESTO è APPOSTO, IL DANNNO è DA SISTEMARE!!!
 
 D_tot, D_cumulative, f_i, n_tot = calcola_D(N_f, n_i)
 print(f"n_tot: {n_tot}")
