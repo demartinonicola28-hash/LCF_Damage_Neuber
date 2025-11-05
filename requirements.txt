@@ -3,3 +3,4 @@ matplotlib
 scipy
 pyqt5
 pandas
+pylance
