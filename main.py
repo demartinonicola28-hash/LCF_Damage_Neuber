@@ -16,10 +16,6 @@ from ISO19902.initiation_life import calcola_N_f
 from ISO19902.damage import calcola_D
 
 
-
-"""
-Funzione principale che esegue la GUI, carica i dati, calcola S, esegue Rainflow e plottiamo la matrice 3D.
-"""
 # --- STEP 1: CARICA DATI ---
 app = App()  # Avvia la GUI per caricare i dati
 app.mainloop()  # Esegui l'app
@@ -30,15 +26,18 @@ if not getattr(app, "data", None):
 # I dati vengono già salvati come vettori nella variabile globale
 time, VM, P11, P22 = app.data  # Ottieni i dati da `carica_dati.py`
 
+
 # --- STEP 2: CALCOLA IL VETTORE S ---
 # Calcola il vettore S usando la funzione di `S_t.py`
 S = calcola_S(VM, P11, P22)
 plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
 
-# --- STEP 3: CLEAN SIGNAL (picchi e valli) ---
+
+# --- STEP 3: "PULIRE" IL SEGNALE" (picchi e valli) ---
 S_p, step = calcola_S_p(S, time)
 plot_S_step(step, S_p)
 print(f"n_Sp: {len(S_p)}")
+
 
 # --- STEP 4: ESEGUI RAINFLOW COUNTING ---
 S_r, S_0, n_i = rainflow_counting(S_p)
@@ -77,8 +76,8 @@ for key, value in params.items():
     print(f"{key}: {value}")
 print("==================") 
 
-# --- STEP 6: NEUBER'S METHOD ---> [sigma_p sigma_r sigma_0] ---
 
+# --- STEP 6: NEUBER'S METHOD ---> [sigma_p sigma_r sigma_0] ---
 sigma_r = np.array(calcola_sigma_r(Kf, list(S_r), E, K_prime, n_prime, gamma_M2, gamma_FE))
 sigma_p = np.array(calcola_sigma_p(list(S_0), list(S_r), Kf, E, K_prime, n_prime, gamma_M2, gamma_FE))
 sigma_0 = sigma_p - 0.5 * sigma_r
@@ -88,8 +87,8 @@ print(f"sigma_r[0:5]: {sigma_r[:5]}")
 print(f"sigma_p[0:5]: {sigma_p[:5]}")
 print(f"sigma_0[0:5]: {sigma_0[:5]}")
 
-# --- STEP 7: STRESS & STRAIN FULLY REVERSED CYCLE (R=-1) --->  [sigma_re epsilon_re] ---
 
+# --- STEP 7: STRESS & STRAIN FULLY REVERSED CYCLE (R=-1) --->  [sigma_re epsilon_re] ---
 sigma_a, sigma_re = np.array(calcola_sigma_re(sigma_r, sigma_0, sigma_prime_f))
 epsilon_re = np.array(calcola_epsilon_re(E, K_prime, n_prime, sigma_re))
 
@@ -103,8 +102,8 @@ print(f"sigma_a: {len(sigma_a)}")
 print(f"sigma_re: {len(sigma_re)}")
 print(f"epsilon_re: {len(epsilon_re)}")
 
-# --- STEP 8: STRAIN LIFE (SWT) --->  [N_f] ---
 
+# --- STEP 8: STRAIN LIFE (SWT) --->  [N_f] ---
 N_f = np.asarray(
     calcola_N_f(sigma_re=sigma_re, epsilon_re=epsilon_re, E=E,
                 sigma_f_prime=sigma_prime_f, epsilon_f_prime=epsilon_prime_f,
@@ -115,9 +114,9 @@ print("=== Initiation Life Method (SWT) ===")
 print(f"n: {N_f.size}")
 print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
+
 # --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---
 #IL RESTO è APPOSTO, IL DANNNO è DA SISTEMARE!!!
-
-D_tot, D_cumulative, f_i, n_tot = calcola_D(N_f, n_i)
+D_tot, D_ni, f_i, n_tot = calcola_D(N_f, n_i)
 print(f"n_tot: {n_tot}")
 print(f"D_tot: {D_tot}")

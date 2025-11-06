@@ -9,8 +9,11 @@
 - Se Annulla o X: interrompe l'analisi
 - Se un campo è vuoto o non numerico: mostra errore e non prosegue
 """
-
+from pathlib import Path
 import sys
+from PIL import Image, ImageTk
+import tkinter as tk
+from tkinter import ttk, messagebox
 
 # === DEFAULTS: modificabili a piacere ===
 DEFAULTS = {
@@ -60,14 +63,6 @@ def ask_parameters():
     Annulla/X: interrompe l'analisi.
     In assenza di Tkinter o GUI: usa i default.
     """
-    # Import lazy per poter funzionare anche in ambienti headless
-    try:
-        import tkinter as tk
-        from tkinter import ttk, messagebox
-    except Exception:
-        globals().update(DEFAULTS)
-        return DEFAULTS.copy()
-
     # Prova ad aprire la finestra
     try:
         root = tk.Tk()
@@ -77,9 +72,12 @@ def ask_parameters():
 
     # Imposta l'icona della finestra
     root.iconbitmap(r"C:\Users\demnic15950\Downloads\LCF_Damage_Neuber\ISO19902\icona.ico")  # Sostituisci "icona.ico" con il percorso corretto del tuo file icona    
-    
+    #                      |
+    #                      |
+    #                      V
     # C:\Users\demnic15950\Downloads\LCF_Damage_Neuber\icona.ico
     # D:\Utente\Downloads\LCF_Damage_Neuber\icona.ico
+
     # === Finestra ===
     root.title("Low-Cycle Fatigue Analysis")
     root.resizable(True, True)
@@ -146,16 +144,26 @@ def ask_parameters():
     style.configure("White.TLabelframe")            # background="white")
     style.configure("White.TLabelframe.Label")      # background="white")
 
+    def resource_path(name: str) -> Path:
+        # Se esegui con PyInstaller usa la cartella temporanea del bundle,
+        # altrimenti la cartella del file .py
+        base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+        return base / name  # se l'immagine è in "assets/", usa: base / "assets" / name
+
     try:
-        from PIL import Image, ImageTk
-        img = Image.open("formulas.png")
-        img.thumbnail((260*1.73, 500*1.73))
+        img_path = resource_path("formulas.png")
+        if not img_path.exists():
+            raise FileNotFoundError(img_path)
+
+        img = Image.open(img_path)
+        img.thumbnail((int(260*1.73), int(500*1.73)))  # assicura interi
         photo = ImageTk.PhotoImage(img)
-        img_label = ttk.Label(right_lf, image=photo) 
-        img_label.image = photo
+
+        img_label = ttk.Label(right_lf, image=photo)
+        img_label.image = photo  # evita il garbage collection
         img_label.pack()
-    except Exception:
-        ttk.Label(right_lf, text="formulas.png non trovata", background="white").pack()
+    except Exception as e:
+        ttk.Label(right_lf, text=f"Immagine non trovata: {e}", background="white").pack()
     # --------------------------------------------------------------------------
 
 
