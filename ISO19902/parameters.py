@@ -1,219 +1,381 @@
 # parameters.py
 """
-- Parametri di default
-- Finestra iniziale per l'inserimento con tre riquadri:
-    1) Neuber parameters
-    2) Ramberg–Osgood parameters
-    3) Smith–Watson–Topper parameters
-- Etichette con simboli: K′, n′, σ′f, ε′f
-- Se Annulla o X: interrompe l'analisi
-- Se un campo è vuoto o non numerico: mostra errore e non prosegue
+GUI parametri con opzione UML (Bäumel–Seeger).
+- Se UML attivo:
+    K′ = 1.65 * fu
+    n′ = 0.15
+    σ′f = 1.5 * fu
+    ψ = 1              se fu/E ≤ 0.003
+        1.375 − 125 fu/E  altrimenti
+    ε′f = 0.59 * ψ
+    b = −0.087
+    c = −0.58
+  I campi sopra sono bloccati e mostrano il valore calcolato.
+- Se UML disattivo: i campi restano precompilati ma modificabili.
+
+Altre funzioni:
+- Kf = Δσc_smooth / Δσc_notch (auto-update, read-only).
+- Icona e immagine con percorsi robusti (PyInstaller compatibile).
 """
+
 from pathlib import Path
 import sys
 from PIL import Image, ImageTk
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, Tk
 
-# === DEFAULTS: modificabili a piacere ===
+# ==========================
+# DEFAULTS
+# ==========================
 DEFAULTS = {
-    "Kf": 160/56,   # Fattore di concentrazione della tensione (calcolato come Δσc liscia / Δσc intagliata)
-    # St-52-3 (1,0841) - pagina 169 MATERIALS DATA FOR CYCLIC LOADING - Chr. Boller, T. Seeger
-    "E": 210000.0,                # MPa
-    "K_prime": 841.5,        # MPa (K′)
-    "n_prime": 0.15,              # n′
-    "sigma_prime_f": 765,   # MPa (σ′f)
-    "epsilon_prime_f": 0.59,      # (ε'f)
+    # EN 1993-1-9 categorie (per Kf)
+    "delta_sigma_smooth": 160.0,   # MPa
+    "delta_sigma_notch": 56.0,     # MPa
+
+    # Parametri base
+    "E": 210000.0,                 # MPa
+    "fu": 510.0,                   # MPa (σu)
+
+    # Stabilized cyclic curve - Ramberg–Osgood
+    "K_prime": 841.5,              # MPa (K′)
+    "n_prime": 0.15,               # n′
+
+    # Smith–Watson–Topper's approch
+    "sigma_prime_f": 765.0,        # MPa (σ′f)
+    "epsilon_prime_f": 0.59,       # (ε′f)
     "b": -0.087,
     "c": -0.58,
-    # Fattori di sicurezza parziali (EN 1993 e EN 1998)
+
+    # Fattori parziali
     "gamma_M2": 1.05,
     "gamma_ov": 1.25,
     "gamma_I": 1.2,
     "gamma_FE": 1.05,
-    "delta_sigma_smooth": 160,
-    "delta_sigma_notch": 56,
 }
 
-# Esporta anche variabili globali per compatibilità col resto del codice
+# Esporta globali compatibili con il resto del progetto
 E = DEFAULTS["E"]
-Kf = DEFAULTS["Kf"]
+fu = DEFAULTS["fu"]
+delta_sigma_smooth = DEFAULTS["delta_sigma_smooth"]
+delta_sigma_notch = DEFAULTS["delta_sigma_notch"]
+Kf = delta_sigma_smooth / delta_sigma_notch
 K_prime = DEFAULTS["K_prime"]
 n_prime = DEFAULTS["n_prime"]
 sigma_prime_f = DEFAULTS["sigma_prime_f"]
 epsilon_prime_f = DEFAULTS["epsilon_prime_f"]
 b = DEFAULTS["b"]
 c = DEFAULTS["c"]
-# Fattori di sicurezza parziali (EN 1993 e EN 1998)
 gamma_M2 = DEFAULTS["gamma_M2"]
 gamma_ov = DEFAULTS["gamma_ov"]
 gamma_I = DEFAULTS["gamma_I"]
 gamma_FE = DEFAULTS["gamma_FE"]
-delta_sigma_smooth = DEFAULTS["delta_sigma_smooth"]
-delta_sigma_notch = DEFAULTS["delta_sigma_notch"]
 
+
+# ==========================
+# UTILITY: risorse e icona
+# ==========================
+def resource_path(name: str) -> Path:
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base / name
+
+def set_app_icon(root: Tk, icon_name: str = "icona.ico") -> None:
+    for p in (resource_path(icon_name),
+              resource_path("assets") / icon_name,
+              Path.cwd() / icon_name):
+        if p.exists():
+            try:
+                if sys.platform.startswith("win") and p.suffix.lower() == ".ico":
+                    root.iconbitmap(str(p))
+                    return
+            except Exception:
+                pass
+            img = Image.open(p)
+            photo = ImageTk.PhotoImage(img)
+            root.iconphoto(True, photo)
+            root._icon_ref = photo  # evita GC
+            return
+
+
+# ==========================
+# UML: formule
+# ==========================
+def compute_uml_params(E_val: float, fu_val: float):
+    """Ritorna un dict con i parametri calcolati via UML."""
+    Kp = 1.65 * fu_val
+    np = 0.15
+    sigf = 1.5 * fu_val
+    ratio = fu_val / E_val
+    psi = 1.0 if ratio <= 0.003 else (1.375 - 125.0 * ratio)
+    epsf = 0.59 * psi
+    return {
+        "K_prime": Kp,
+        "n_prime": np,
+        "sigma_prime_f": sigf,
+        "epsilon_prime_f": epsf,
+        "b": -0.087,
+        "c": -0.58,
+    }
+
+
+# ==========================
+# GUI principale
+# ==========================
 def ask_parameters():
-    """
-    GUI con tre riquadri:
-      - Neuber parameters: Kf
-      - Ramberg–Osgood:    E, K′ (K_prime), n′ (n_prime)
-      - Smith–Watson–Topper: σ′f (sigma_prime_f), ε′f (epsilon_prime_f), b, c
-
-    Mostra i default. Campi obbligatori e numerici.
-    Annulla/X: interrompe l'analisi.
-    In assenza di Tkinter o GUI: usa i default.
-    """
-    # Prova ad aprire la finestra
+    # Avvio finestra o fallback headless
     try:
         root = tk.Tk()
     except Exception:
-        globals().update(DEFAULTS)
-        return DEFAULTS.copy()
+        out = DEFAULTS.copy()
+        out["Kf"] = out["delta_sigma_smooth"] / out["delta_sigma_notch"]
+        globals().update(out)
+        return out
 
-    # Imposta l'icona della finestra
-    root.iconbitmap(r"C:\Users\demnic15950\Downloads\LCF_Damage_Neuber\ISO19902\icona.ico")  # Sostituisci "icona.ico" con il percorso corretto del tuo file icona    
-    #                      |
-    #                      |
-    #                      V
-    # C:\Users\demnic15950\Downloads\LCF_Damage_Neuber\icona.ico
-    # D:\Utente\Downloads\LCF_Damage_Neuber\icona.ico
-
-    # === Finestra ===
     root.title("Low-Cycle Fatigue Analysis")
-    root.resizable(True, True)
-    root.geometry("400x650")     # larghezza x altezza
-    root.minsize(885, 600)
+    root.geometry("980x650")
+    root.minsize(980, 600)
+    set_app_icon(root, "icona.ico")
 
-    # Contenitore principale
     container = ttk.Frame(root, padding=20)
     container.grid(sticky="nsew")
     container.columnconfigure(0, weight=1)
+    container.columnconfigure(1, weight=0)
 
-    # === Definizione gruppi (label visibili → nome variabile) ===
-    # Le etichette usano i simboli richiesti; i dati vengono salvati nei nomi variabile standard
-    groups = [
-        ("EN 1993-1-9: 2025", [
-            ("Smooth detail category Δσc           ", "delta_sigma_smooth"),
-            ("Notch detail category Δσc           ", "delta_sigma_notch"),
-            ("Fatigue notch factor  Kf           ", "Kf")  # Mostra Kf come calcolato da A/B
-        ]),
-        ("Stabilized Cyclic Curve - Ramberg–Osgood", [
-            ("Young's modulus   E           ", "E"),
-            ("Cyclic hardening coefficient K′            ", "K_prime"),
-            ("Cyclic hardening exponent n′            ", "n_prime"),
-        ]),
-        ("Initiaton Life Method ISO 19902: 2020", [
-            ("Fatigue strenght coefficient σ′f           ", "sigma_prime_f"),
-            ("Fatigue ductility coefficiet ε′f           ", "epsilon_prime_f"),
-            ("atigue strenght exponent b             ", "b"),
-            ("Fatigue ductility exponent c             ", "c"),
-        ]),
-        ("EN 1993 and EN 1998", [
-            ("Partial factor for steel γM2            ", "gamma_M2"),
-            ("Overstrength factor γov           ", "gamma_ov"),
-            ("Importance factor γI            ", "gamma_I"),
-            ("Model factor γFE           ", "gamma_FE"),
-        ])
-    ]
-
-    entries = {}   # mappa: nome_variabile -> widget Entry
-
-    # Crea i tre riquadri con i campi e inserisce i default visibili
-    row_g = 0
-    for title, items in groups:
-        lf = ttk.LabelFrame(container, text=title, padding=10)
-        lf.grid(row=row_g, column=0, sticky="ew", pady=(0, 10))
-        lf.columnconfigure(1, weight=1)
-
-        for i, (label_text, var_name) in enumerate(items):
-            ttk.Label(lf, text=label_text).grid(row=i, column=0, sticky="w", padx=(0, 8), pady=4)
-            e = ttk.Entry(lf, width=20)
-            e.grid(row=i, column=1, sticky="ew")
-            # mostra default
-            e.insert(0, str(DEFAULTS[var_name]))
-            entries[var_name] = e
-        row_g += 1
-
-    # --- Colonna destra con immagine e sfondo bianco --------------------------
-    right_lf = ttk.LabelFrame(container, text="Reference formulas", padding=10)
-    right_lf.grid(row=0, column=1, rowspan=row_g+1, sticky="n", padx=(12, 0))
-
-    # imposta sfondo bianco
-    right_lf.configure(style="White.TLabelframe")
+    # Stile per riquadro immagine
     style = ttk.Style()
-    style.configure("White.TLabelframe")            # background="white")
-    style.configure("White.TLabelframe.Label")      # background="white")
+    style.configure("White.TLabelframe")
+    style.configure("White.TLabelframe.Label")
 
-    def resource_path(name: str) -> Path:
-        # Se esegui con PyInstaller usa la cartella temporanea del bundle,
-        # altrimenti la cartella del file .py
-        base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-        return base / name  # se l'immagine è in "assets/", usa: base / "assets" / name
+    # -------------------------------------------------
+    # Riquadro: EN 1993-1-9 (Δσc e Kf auto)
+    # -------------------------------------------------
+    lf_en = ttk.LabelFrame(container, text="EN 1993-1-9: 2025", padding=10)
+    lf_en.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+    lf_en.columnconfigure(1, weight=1)
 
+    # Etichette e entry per Δσc
+    ttk.Label(lf_en, text="Smooth detail category Δσc").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_ds = ttk.Entry(lf_en, width=20)
+    ent_ds.grid(row=0, column=1, sticky="ew")
+    ent_ds.insert(0, str(DEFAULTS["delta_sigma_smooth"]))
+
+    ttk.Label(lf_en, text="Notch detail category Δσc").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_dn = ttk.Entry(lf_en, width=20)
+    ent_dn.grid(row=1, column=1, sticky="ew")
+    ent_dn.insert(0, str(DEFAULTS["delta_sigma_notch"]))
+
+    # Funzione per calcolare Kf da Δσc_smooth e Δσc_notch
+    def calculate_Kf(delta_sigma_smooth, delta_sigma_notch):
+        return delta_sigma_smooth / delta_sigma_notch
+
+    # Etichetta e entry per Kf (read-only)
+    ttk.Label(lf_en, text="Fatigue notch factor Kf").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_kf = ttk.Entry(lf_en, width=20, state=tk.DISABLED)
+    ent_kf.grid(row=2, column=1, sticky="ew")
+
+    # Calcola Kf subito dopo il caricamento dei valori predefiniti
+    Kf_value = calculate_Kf(DEFAULTS["delta_sigma_smooth"], DEFAULTS["delta_sigma_notch"])
+    ent_kf.insert(0, f"{Kf_value}")  # Inserisci Kf calcolato
+
+    # Riquadro: EN 1993-1-9 (Δσc e Kf auto)
+    lf_en = ttk.LabelFrame(container, text="EN 1993-1-9: 2025", padding=10)
+    lf_en.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+    lf_en.columnconfigure(1, weight=1)
+
+    # Etichette e entry per Δσc
+    ttk.Label(lf_en, text="Smooth detail category Δσc").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_ds = ttk.Entry(lf_en, width=20)
+    ent_ds.grid(row=0, column=1, sticky="ew")
+    ent_ds.insert(0, str(DEFAULTS["delta_sigma_smooth"]))
+
+    ttk.Label(lf_en, text="Notch detail category Δσc").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_dn = ttk.Entry(lf_en, width=20)
+    ent_dn.grid(row=1, column=1, sticky="ew")
+    ent_dn.insert(0, str(DEFAULTS["delta_sigma_notch"]))
+
+    # Etichetta e entry per Kf (read-only)
+    ttk.Label(lf_en, text="Fatigue notch factor Kf").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_kf = ttk.Entry(lf_en, width=20, state=tk.DISABLED)
+    ent_kf.grid(row=2, column=1, sticky="ew")
+
+    # Funzione di aggiornamento di Kf
+    def update_kf(*_):
+        try:
+            # Calcola Kf da Δσc_smooth e Δσc_notch
+            ds = float(ent_ds.get().replace(",", ".").strip())
+            dn = float(ent_dn.get().replace(",", ".").strip())
+            if dn == 0:  # Proteggi da divisione per zero
+                val = ""
+            else:
+                val = calculate_Kf(ds, dn)  # Usa la funzione per calcolare Kf
+            # Aggiorna Kf
+            ent_kf.configure(state=tk.NORMAL)
+            ent_kf.delete(0, tk.END)
+            ent_kf.insert(0, "" if val == "" else f"{val}")
+            ent_kf.configure(state=tk.DISABLED)
+        except ValueError:
+            pass
+
+    # Calcola Kf subito dopo il caricamento dei valori predefiniti
+    update_kf()  # Aggiungi questa riga per calcolare Kf appena la finestra si apre.
+
+    # Eventi per aggiornare Kf quando l'utente modifica i campi
+    ent_ds.bind("<KeyRelease>", update_kf)
+    ent_dn.bind("<KeyRelease>", update_kf)
+
+    # -------------------------------------------------
+    # Riquadro: UML + fu (prima di Ramberg–Osgood)
+    # -------------------------------------------------
+    lf_pr = ttk.LabelFrame(container, text="STEEL'S PROPERTIES", padding=10)
+    lf_pr.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+    lf_pr.columnconfigure(1, weight=1)
+
+    uml_var = tk.BooleanVar(value=True)
+    chk_uml = ttk.Checkbutton(lf_pr, text="Uniform Material Law (UML) – Bäumel & Seeger", variable=uml_var)
+    chk_uml.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+    ttk.Label(lf_pr, text="Young's modulus E").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_E = ttk.Entry(lf_pr, width=20); ent_E.grid(row=1, column=1, sticky="ew"); ent_E.insert(0, str(DEFAULTS["E"]))
+
+    ttk.Label(lf_pr, text="Ultimate tensile strength fu").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_fu = ttk.Entry(lf_pr, width=20); ent_fu.grid(row=2, column=1, sticky="ew"); ent_fu.insert(0, str(DEFAULTS["fu"]))
+
+    # -------------------------------------------------
+    # Riquadro: Ramberg–Osgood
+    # -------------------------------------------------
+    lf_ro = ttk.LabelFrame(container, text="Stabilized Cyclic Curve (Ramberg – Osgood)", padding=10)
+    lf_ro.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+    lf_ro.columnconfigure(1, weight=1)
+
+    ttk.Label(lf_ro, text="Cyclic hardening coefficient K′").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_Kp = ttk.Entry(lf_ro, width=20); ent_Kp.grid(row=0, column=1, sticky="ew"); ent_Kp.insert(0, str(DEFAULTS["K_prime"]))
+
+    ttk.Label(lf_ro, text="Cyclic hardening exponent n′").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_np = ttk.Entry(lf_ro, width=20); ent_np.grid(row=1, column=1, sticky="ew"); ent_np.insert(0, str(DEFAULTS["n_prime"]))
+
+    # -------------------------------------------------
+    # Riquadro: Smith–Watson–Topper
+    # -------------------------------------------------
+    lf_swt = ttk.LabelFrame(container, text="Initiation Life Method – ISO 19902:2020", padding=10)
+    lf_swt.grid(row=3, column=0, sticky="ew", pady=(0, 10))
+    lf_swt.columnconfigure(1, weight=1)
+
+    ttk.Label(lf_swt, text="Fatigue strength coefficient σ′f").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_sigf = ttk.Entry(lf_swt, width=20); ent_sigf.grid(row=0, column=1, sticky="ew"); ent_sigf.insert(0, str(DEFAULTS["sigma_prime_f"]))
+
+    ttk.Label(lf_swt, text="Fatigue ductility coefficient ε′f").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_epsf = ttk.Entry(lf_swt, width=20); ent_epsf.grid(row=1, column=1, sticky="ew"); ent_epsf.insert(0, str(DEFAULTS["epsilon_prime_f"]))
+
+    ttk.Label(lf_swt, text="Fatigue strength exponent b").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_b = ttk.Entry(lf_swt, width=20); ent_b.grid(row=2, column=1, sticky="ew"); ent_b.insert(0, str(DEFAULTS["b"]))
+
+    ttk.Label(lf_swt, text="Fatigue ductility exponent c").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_c = ttk.Entry(lf_swt, width=20); ent_c.grid(row=3, column=1, sticky="ew"); ent_c.insert(0, str(DEFAULTS["c"]))
+
+    # -------------------------------------------------
+    # Riquadro: fattori EN 1993 e EN 1998
+    # -------------------------------------------------
+    lf_fac = ttk.LabelFrame(container, text="EN 1993 e EN 1998", padding=10)
+    lf_fac.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+    lf_fac.columnconfigure(1, weight=1)
+
+    ttk.Label(lf_fac, text="γM2").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gM2 = ttk.Entry(lf_fac, width=20); ent_gM2.grid(row=0, column=1, sticky="ew"); ent_gM2.insert(0, str(DEFAULTS["gamma_M2"]))
+
+    ttk.Label(lf_fac, text="γov").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gov = ttk.Entry(lf_fac, width=20); ent_gov.grid(row=1, column=1, sticky="ew"); ent_gov.insert(0, str(DEFAULTS["gamma_ov"]))
+
+    ttk.Label(lf_fac, text="γI").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gI = ttk.Entry(lf_fac, width=20); ent_gI.grid(row=2, column=1, sticky="ew"); ent_gI.insert(0, str(DEFAULTS["gamma_I"]))
+
+    ttk.Label(lf_fac, text="γFE").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gFE = ttk.Entry(lf_fac, width=20); ent_gFE.grid(row=3, column=1, sticky="ew"); ent_gFE.insert(0, str(DEFAULTS["gamma_FE"]))
+
+    # -------------------------------------------------
+    # Colonna destra: immagine formule
+    # -------------------------------------------------
+    lf_img = ttk.LabelFrame(container, text="Reference formulas", padding=10, style="White.TLabelframe")
+    lf_img.grid(row=0, column=1, rowspan=6, sticky="n", padx=(12, 0))
     try:
         img_path = resource_path("formulas.png")
         if not img_path.exists():
-            raise FileNotFoundError(img_path)
-
+            img_path = resource_path("assets/formulas.png")
         img = Image.open(img_path)
-        img.thumbnail((int(260*1.73), int(500*1.73)))  # assicura interi
+        img.thumbnail((int(260*1.73), int(500*1.73)))
         photo = ImageTk.PhotoImage(img)
-
-        img_label = ttk.Label(right_lf, image=photo)
-        img_label.image = photo  # evita il garbage collection
-        img_label.pack()
+        lbl_img = ttk.Label(lf_img, image=photo); lbl_img.image = photo; lbl_img.pack()
     except Exception as e:
-        ttk.Label(right_lf, text=f"Immagine non trovata: {e}", background="white").pack()
-    # --------------------------------------------------------------------------
+        ttk.Label(lf_img, text=f"Immagine non trovata: {e}").pack()
 
+    # -------------------------------------------------
+    # Logica UML: calcolo, blocco/sblocco, binding
+    # -------------------------------------------------
+    uml_targets = [ent_Kp, ent_np, ent_sigf, ent_epsf, ent_b, ent_c]
 
-    # Disabilita la casella di testo di Kf per non permettere modifiche
-    entries["Kf"].config(state=tk.DISABLED)
+    def set_state(widgets, state):
+        for w in widgets:
+            w.configure(state=state)
 
-    # Funzione di aggiornamento in tempo reale per Kf
-    def update_Kf():
+    def recalc_from_uml(*_):
+        if not uml_var.get():
+            return
         try:
-            delta_sigma_smooth = float(entries["delta_sigma_smooth"].get().replace(",", "."))
-            delta_sigma_notch = float(entries["delta_sigma_notch"].get().replace(",", "."))
-            # Calcola Kf come delta_sigma_smooth / delta_sigma_notch
-            Kf_value = delta_sigma_smooth / delta_sigma_notch
-            entries["Kf"].config(state=tk.NORMAL)  # Rendi la casella Kf modificabile temporaneamente
-            entries["Kf"].delete(0, tk.END)
-            entries["Kf"].insert(0, str(Kf_value))
-            entries["Kf"].config(state=tk.DISABLED)  # Rendi la casella Kf non modificabile
+            E_val = float(ent_E.get().replace(",", "."))
+            fu_val = float(ent_fu.get().replace(",", "."))
         except ValueError:
-            # In caso di errore (ad esempio, se non sono numeri validi), non aggiornare Kf
-            pass
+            return
+        vals = compute_uml_params(E_val, fu_val)
+        # Aggiorna contenuti (temporaneamente abilita per scrivere)
+        for w in uml_targets:
+            w.configure(state=tk.NORMAL)
+        ent_Kp.delete(0, tk.END);   ent_Kp.insert(0, f"{vals['K_prime']}")
+        ent_np.delete(0, tk.END);   ent_np.insert(0, f"{vals['n_prime']}")
+        ent_sigf.delete(0, tk.END); ent_sigf.insert(0, f"{vals['sigma_prime_f']}")
+        ent_epsf.delete(0, tk.END); ent_epsf.insert(0, f"{vals['epsilon_prime_f']}")
+        ent_b.delete(0, tk.END);    ent_b.insert(0, f"{vals['b']}")
+        ent_c.delete(0, tk.END);    ent_c.insert(0, f"{vals['c']}")
+        # Riblocca
+        set_state(uml_targets, tk.DISABLED)
 
-    # Aggiungi eventi per aggiornare Kf ogni volta che delta_sigma_smooth o delta_sigma_notch vengono modificati
-    entries["delta_sigma_smooth"].bind("<KeyRelease>", lambda event: update_Kf())
-    entries["delta_sigma_notch"].bind("<KeyRelease>", lambda event: update_Kf())
+    def apply_uml_toggle(*_):
+        if uml_var.get():
+            recalc_from_uml()
+            set_state(uml_targets, tk.DISABLED)
+        else:
+            set_state(uml_targets, tk.NORMAL)
 
-    # Focus al primo campo
-    first_var = groups[0][1][0][1]  # "delta_sigma_smooth"
-    entries[first_var].focus_set()
+    chk_uml.configure(command=apply_uml_toggle)
+    ent_fu.bind("<KeyRelease>", recalc_from_uml)
+    ent_E.bind("<KeyRelease>", recalc_from_uml)
+    apply_uml_toggle()  # inizializza secondo stato corrente
 
-    # Stato di conferma
+    # -------------------------------------------------
+    # Pulsanti e callbacks
+    # -------------------------------------------------
     confirmed = {"ok": False}
     result = {}
 
-    # === Callbacks ===
     def on_ok():
-        # Campi non vuoti
-        for var_name, ent in entries.items():
-            if not ent.get().strip():
-                messagebox.showerror("Errore", "Dati mancanti. Compila tutti i campi.")
-                return
-        # Conversione numerica
+        # Conversioni numeriche
         try:
-            for var_name, ent in entries.items():
-                val = float(ent.get().replace(",", "."))
-                result[var_name] = val
+            result["delta_sigma_smooth"] = float(ent_ds.get().replace(",", "."))
+            result["delta_sigma_notch"]  = float(ent_dn.get().replace(",", "."))
+            result["Kf"] = float(ent_kf.get().replace(",", "."))
+            result["fu"] = float(ent_fu.get().replace(",", "."))
+            result["E"]  = float(ent_E.get().replace(",", "."))
+            result["K_prime"] = float(ent_Kp.get().replace(",", "."))
+            result["n_prime"] = float(ent_np.get().replace(",", "."))
+            result["sigma_prime_f"]   = float(ent_sigf.get().replace(",", "."))
+            result["epsilon_prime_f"] = float(ent_epsf.get().replace(",", "."))
+            result["b"] = float(ent_b.get().replace(",", "."))
+            result["c"] = float(ent_c.get().replace(",", "."))
+            result["gamma_M2"] = float(ent_gM2.get().replace(",", "."))
+            result["gamma_ov"] = float(ent_gov.get().replace(",", "."))
+            result["gamma_I"]  = float(ent_gI.get().replace(",", "."))
+            result["gamma_FE"] = float(ent_gFE.get().replace(",", "."))
         except ValueError:
             messagebox.showerror("Errore", "Inserisci solo numeri (usa . come separatore).")
             return
 
-        # Aggiorna le variabili globali del modulo
         globals().update(result)
         confirmed["ok"] = True
         root.destroy()
@@ -222,23 +384,25 @@ def ask_parameters():
         confirmed["ok"] = False
         root.destroy()
 
-    # Pulsanti
-    btns = ttk.Frame(container)
-    btns.grid(row=row_g, column=0, sticky="e")
+    btns = ttk.Frame(container); btns.grid(row=5, column=0, sticky="e")
     ttk.Button(btns, text="Annulla", command=on_cancel).grid(row=0, column=0, padx=(0, 8), pady=(4, 0))
     ttk.Button(btns, text="OK", command=on_ok).grid(row=0, column=1, pady=(4, 0))
 
-    # Eventi finestra
     root.protocol("WM_DELETE_WINDOW", on_cancel)
     root.bind("<Return>", lambda e: on_ok())
     root.bind("<Escape>", lambda e: on_cancel())
+    ent_ds.focus_set()
 
-    # Avvio GUI
     root.mainloop()
 
-    # Uscita secondo scelta utente
     if not confirmed["ok"]:
         print("Analisi annullata dall'utente.")
         sys.exit(0)
 
     return result
+
+
+# Test manuale
+if __name__ == "__main__":
+    params = ask_parameters()
+    print(params)
