@@ -7,6 +7,8 @@ from tkinter import ttk
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 # Funzione per calcolare il segno della somma P11 + P22
@@ -94,65 +96,115 @@ def rainflow_counting(S):
     return S_r, S_0, n_i
 
 # Funzione per plottare la matrice 3D
-def plot_rainflow(S_r, S_0, n_i, delta_S_r=10, delta_S_0=5):
+def plot_rainflow(S_r, S_0, n_i, delta_S_r=10.0, delta_S_0=5.0):
     """
-    Plotta un istogramma 3D raggruppando le righe in base a intervalli specifici di S_r e S_0.
-    La somma di n_i è calcolata per ogni gruppo e plottata come barra 3D.
+    Istogramma 3D della matrice rainflow con:
+      - colormap 'Spectral_r'
+      - colorbar al 50% di altezza, esterna a destra
+      - tick colorbar ogni 0.5
+      - assi X (S_r) e Y (S_0) da floor(min) a ceil(max)
     """
-    # Crea gli intervalli per S_r (Stress Range) e S_0 (Mean Stress) in base ai delta
-    S_r_bins = np.arange(0, np.max(S_r) + delta_S_r, delta_S_r)  # Creazione intervallo per S_r
-    S_0_bins = np.arange(0, np.max(S_0) + delta_S_0, delta_S_0)  # Creazione intervallo per S_0
+    # --- import locali
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-    # Crea un istogramma 2D con i pesi come n_i (somma dei reversals per ogni cella)
+    # ----- 1) Sanitizzazione input
+    S_r = np.asarray(S_r, dtype=float).ravel()
+    S_0 = np.asarray(S_0, dtype=float).ravel()
+    n_i = np.asarray(n_i, dtype=float).ravel()
+    m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(n_i)
+    S_r, S_0, n_i = S_r[m], S_0[m], n_i[m]
+
+    # ----- 2) Estremi reali e arrotondati a integer
+    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
+    s0_min, s0_max = float(np.min(S_0)), float(np.max(S_0))
+    sr_lo, sr_hi = np.floor(sr_min), np.ceil(sr_max)   # ⌊min⌋, ⌈max⌉ per S_r
+    s0_lo, s0_hi = np.floor(s0_min), np.ceil(s0_max)   # ⌊min⌋, ⌈max⌉ per S_0
+
+    # ----- 3) Bin edges allineati agli estremi arrotondati
+    # Se range nullo, forzo almeno un bin usando i delta
+    if sr_hi == sr_lo:
+        S_r_bins = np.array([sr_lo, sr_lo + delta_S_r])
+    else:
+        S_r_bins = np.arange(sr_lo, sr_hi + delta_S_r, delta_S_r)
+
+    if s0_hi == s0_lo:
+        S_0_bins = np.array([s0_lo, s0_lo + delta_S_0])
+    else:
+        S_0_bins = np.arange(s0_lo, s0_hi + delta_S_0, delta_S_0)
+
+    # ----- 4) Istogramma 2D pesato
     H, xedges, yedges = np.histogram2d(S_r, S_0, bins=[S_r_bins, S_0_bins], weights=n_i)
 
-    # Calcola la posizione di ogni barra nel grafico 3D
-    xpos, ypos = np.meshgrid(xedges[:-1] + delta_S_r/2, yedges[:-1] + delta_S_0/2, indexing="ij")
-    xpos = xpos.ravel()
-    ypos = ypos.ravel()
-    zpos = np.zeros_like(xpos)
+    # ----- 5) Centri cella e dimensioni barre
+    xcenters = 0.5 * (xedges[:-1] + xedges[1:])
+    ycenters = 0.5 * (yedges[:-1] + yedges[1:])
+    DXv = np.diff(xedges); DYv = np.diff(yedges)
+    Xc, Yc = np.meshgrid(xcenters, ycenters, indexing="ij")
+    DX, DY = np.meshgrid(DXv, DYv, indexing="ij")
 
-    # Calcola le dimensioni delle barre (delta_S_r e delta_S_0)
-    dx = delta_S_r * np.ones_like(zpos)
-    dy = delta_S_0 * np.ones_like(zpos)
-    dz = H.ravel()  # L'altezza delle barre è la somma dei valori di n_i per ogni cella
+    xpos = Xc.ravel(); ypos = Yc.ravel(); zpos = np.zeros_like(xpos)
+    dx = DX.ravel(); dy = DY.ravel(); dz = H.ravel()
 
-    # Maschera per escludere valori di dz uguali a zero (se non ci sono reversals per quel gruppo)
+    # ----- 6) Filtra celle vuote
     mask = dz > 0
-    xpos = xpos[mask]
-    ypos = ypos[mask]
-    zpos = zpos[mask]
-    dx = dx[mask]
-    dy = dy[mask]
-    dz = dz[mask]
+    if not np.any(mask):
+        fig = plt.figure(figsize=(12, 8)); ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('S_r (Stress Range)'); ax.set_ylabel('S_0 (Mean Stress)'); ax.set_zlabel('n (Reversals)')
+        ax.set_title('Matrice Rainflow (vuota)')
+        # Limiti assi anche se vuoto
+        ax.set_xlim(sr_lo, sr_hi); ax.set_ylim(s0_lo, s0_hi)
+        plt.tight_layout(); plt.show(); return
 
-    # Definisci la colormap
-    colormap = plt.cm.plasma  # Colormap scelta (viridis, plasma, inferno, ecc.)
+    xpos, ypos, zpos = xpos[mask], ypos[mask], zpos[mask]
+    dx, dy, dz = dx[mask], dy[mask], dz[mask]
 
-    # Crea il grafico
+    # ----- 7) Colori con 'Spectral_r'
+    cmap = plt.cm.get_cmap('Spectral_r')
+    vmin, vmax = float(np.min(dz)), float(np.max(dz))
+    if vmin == vmax: vmin = 0.0
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    colors = sm.to_rgba(dz)
+
+    # ----- 8) Figura e barre
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(111, projection='3d')
+    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors, zsort='average')
 
-    # Crea le barre 3D, applicando il colore in base ai valori di dz (numero di reversals)
-    img = ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colormap(dz / np.max(dz)), zsort='average')
-
-    # Imposta le etichette degli assi
+    # ----- 9) Etichette e limiti assi arrotondati
     ax.set_xlabel('S_r (Stress Range)')
     ax.set_ylabel('S_0 (Mean Stress)')
     ax.set_zlabel('n (Reversals)')
     ax.set_title('Matrice Rainflow')
+    ax.set_xlim(sr_lo, sr_hi)   # imposta X da ⌊min⌋ a ⌈max⌉
+    ax.set_ylim(s0_lo, s0_hi)   # imposta Y da ⌊min⌋ a ⌈max⌉
+    ax.set_zlim(0, 5)           # imposta z da ⌊min⌋ a ⌈max⌉
 
-    # Aggiungi la barra dei colori con scala in base al massimo valore di dz
-    cbar = plt.colorbar(img, ax=ax, orientation='vertical')
-    cbar.set_label('Numero di Cicli (Reversals)', fontsize=12)
-    
-    # Mostra il grafico
+    # ----- 10) Colorbar al 50% fuori a destra
+    cb_ax = inset_axes(
+        ax,
+        width="3%", height="50%",          # dimensioni desiderate
+        bbox_to_anchor=(1.05, 0.0, 1, 1),  # tutta a destra, esterna
+        bbox_transform=ax.transAxes,
+        loc="center left",
+        borderpad=0
+    )
+    cbar = plt.colorbar(sm, cax=cb_ax, orientation='vertical')
+    cbar.set_label('Numero di cicli (peso n_i)', fontsize=11)
+
+    # ----- 11) Tick colorbar ogni 0.5
+    step = 0.5
+    lo = np.floor(vmin / step) * step
+    hi = np.ceil(vmax / step) * step
+    cbar.set_ticks(np.arange(lo, hi + 1e-12, step))
+    cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    # ----- 12) Layout e show
+    plt.tight_layout()
     plt.show()
-
-
-
-
-
 
 # Funzione per mostrare la tabella GUI dei risultati Rainflow
 def mostra_tabella(S_r, S_0, n_i):

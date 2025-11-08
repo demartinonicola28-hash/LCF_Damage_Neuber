@@ -13,7 +13,7 @@ from ISO19902.neuber import calcola_sigma_p, calcola_sigma_r
 #from ISO19902.ramberg_osgood import ramberg_osgood_amplitude, ramberg_osgood_range
 from ISO19902.stress_strain_re import calcola_sigma_re, calcola_epsilon_re
 from ISO19902.initiation_life import calcola_N_f
-from ISO19902.damage import calcola_D
+from ISO19902.damage import calcola_D, calcola_n_b
 
 
 # --- STEP 1: CARICA DATI ---
@@ -116,7 +116,10 @@ print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
 
 # --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---
-#IL RESTO è APPOSTO, IL DANNNO è DA SISTEMARE!!!
-D_tot, D_ni, f_i, n_tot = calcola_D(N_f, n_i)
+D_tot, D_ni, n_i, n_tot = calcola_D(N_f, n_i, gamma_I, gamma_ov)
+print(f"n_i[0:{k}]: {n_i[:k].tolist()}")
+print(f"D_ni[0:{k}]: {D_ni[:k].tolist()}")
 print(f"n_tot: {n_tot}")
 print(f"D_tot: {D_tot}")
+n_b = calcola_n_b(D_ni, gamma_I, gamma_ov)
+print(f"n_b: {n_b} blocks")
