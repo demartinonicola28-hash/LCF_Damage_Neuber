@@ -35,7 +35,7 @@ def calcola_D(N_f: Sequence[float], n_i: Sequence[float], gamma_I: float, gamma_
     D_tot = float(np.sum(D_ni)) * gamma_I * 1.1 *gamma_ov
     return D_tot, D_ni, n_i, n_tot
 
-def calcola_n_b(D_ni: Sequence[float], gamma_I: float, gamma_ov: float) -> Tuple[float]:
+def calcola_n_b(D_ni: Sequence[float], gamma_I: float, gamma_ov: float) -> Tuple[float, float]:
     """
     Miner's rule
       - N_f : vite a fatica per classe (S_r, S_0)
@@ -53,5 +53,5 @@ def calcola_n_b(D_ni: Sequence[float], gamma_I: float, gamma_ov: float) -> Tuple
     sum_D_ni = np.nansum(D_ni)
     n_b = np.divide(D_tot, sum_D_ni, out=np.array(np.inf, dtype=float),
                           where=(sum_D_ni != 0) & np.isfinite(sum_D_ni))
-    print(f"sum D_ni: {sum_D_ni}")
-    return n_b
+    #print(f"sum D_ni: {sum_D_ni}")
+    return n_b, sum_D_ni

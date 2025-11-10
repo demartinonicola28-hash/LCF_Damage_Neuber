@@ -216,9 +216,11 @@ def mostra_tabella(S_r, S_0, n_i):
     # Crea la finestra principale
     window = tk.Tk()
     window.title("Rainflow Cycle Counting - Tabella")
+    window.geometry("750x750")
+    window.resizable(False, False)          # <-- blocca le frecce/drag
 
     # Aggiungi la label con il titolo
-    label = tk.Label(window, text="Tab. Rainflow Result", font=("Courier new", 16))
+    label = tk.Label(window, text="Tab. Rainflow Result", font=(16))
     label.pack(pady=10)
 
     # Crea il frame per la tabella e la barra di scorrimento

@@ -1,6 +1,8 @@
 # S_t.py
 import matplotlib.pyplot as plt
 from typing import List, Tuple
+import numpy as np
+
 
 def segno_traccia(P11, P22):
     """
@@ -19,20 +21,23 @@ def plot_S_t(time, S):
     """
     Plotta il grafico S (Stress) vs Time.
     """
-    plt.figure(figsize=(8, 6))
-    plt.plot(time, S, label="Stress (S)", color='b')
-    plt.xlabel('Time')
-    plt.ylabel('Stress (S)')
-    plt.title('Vettore S vs Time')
+    plt.figure(figsize=(10, 6))
+    plt.gca().set_facecolor('whitesmoke')
+    plt.plot(time, S, label="Tensione Nominale - S", color='#0066CC', linewidth=1.5)
+    plt.xlabel('Time - t [s]')
+    plt.ylabel('Tensione Nominale - S [MPa]')
+    x_min = min(time)
+    x_max = max(time)
+    y_min = np.floor(np.nanmin(S)/100)*100
+    y_max = np.ceil( np.nanmax(S)/100)*100
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
+    plt.title('Storia Tensionale a 1,5t dall\'Intaglio')
     plt.grid(True)
-    plt.legend()
     plt.savefig("plot/S_vs_time.png", dpi=600, format="jpg")
     plt.show()
 
 # S_t.py
-from typing import List, Tuple
-import numpy as np
-
 def calcola_S_p(S, time) -> Tuple[List[float], List[int]]:
     """
     Input:
@@ -70,7 +75,7 @@ def calcola_S_p(S, time) -> Tuple[List[float], List[int]]:
     step = list(range(1, len(S_p) + 1))
     return S_p, step
 
-def plot_S_step(step: List[int], S_p: List[float], title: str = "S-step (picchi e valli)"):
+def plot_S_step(step: List[int], S_p: List[float], title: str = "Spettro in Input al Rainflow"):
     step = np.asarray(step)
     S_p = np.asarray(S_p, dtype=float)
     if step.size != S_p.size:
@@ -78,12 +83,19 @@ def plot_S_step(step: List[int], S_p: List[float], title: str = "S-step (picchi 
     if step.size == 0:
         return
 
-    plt.figure()
-    plt.plot(step, S_p, "-o", markersize=4, linewidth=1.4)  # linea diretta tra punti
-    plt.xlabel("step")
-    plt.ylabel("S")
+    plt.figure(figsize=(10, 6))
+    plt.gca().set_facecolor('whitesmoke')
+    plt.plot(step, S_p, "-o", markersize=5, linewidth=1.5, color='#0066CC', markerfacecolor="None", markeredgecolor="#C62828", markeredgewidth=1)
+    plt.xlabel("Cicli di Carico - n")
+    plt.ylabel("Tensione Nominale - S [MPa]")
+    x_min = min(step)
+    x_max = max(step)
+    y_min = np.floor(np.nanmin(S_p)/100)*100
+    y_max = np.ceil( np.nanmax(S_p)/100)*100
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
     plt.title(title)
     plt.grid(True, linestyle=":", linewidth=0.7)
     plt.tight_layout()
-    plt.savefig("plot/S_vs_time.png", dpi=600, format="jpg")
+    plt.savefig("plot/S_vs_step.png", dpi=600, format="jpg")
     plt.show()

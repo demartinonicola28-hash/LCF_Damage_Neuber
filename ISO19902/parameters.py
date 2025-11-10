@@ -124,43 +124,48 @@ def ask_parameters():
     # Avvio finestra o fallback headless
     try:
         root = tk.Tk()
+        ENTRY_COL_PX = 260  # scegli il valore che preferisci
+        LABEL_COL_PX = 180  # larghezza uniforme colonna etichette
     except Exception:
         out = DEFAULTS.copy()
         out["Kf"] = out["delta_sigma_smooth"] / out["delta_sigma_notch"]
         globals().update(out)
         return out
 
-    root.title("Low-Cycle Fatigue Analysis")
-    root.geometry("980x650")
-    root.minsize(980, 600)
+    root.title("Low-Cycle Fatigue Analysis with Neuber's Method")
+    root.geometry("1080x740")
+    root.resizable(False, False)          # <-- blocca le frecce/drag
+    #root.minsize(1200, 500)
     set_app_icon(root, "icona.ico")
 
     container = ttk.Frame(root, padding=20)
     container.grid(sticky="nsew")
-    container.columnconfigure(0, weight=1)
-    container.columnconfigure(1, weight=0)
+    container.columnconfigure(0, weight=1)                        # colonna sinistra
+    container.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)  # colonna destra (immagine)
 
     # Stile per riquadro immagine
     style = ttk.Style()
     style.configure("White.TLabelframe")
     style.configure("White.TLabelframe.Label")
 
+
     # -------------------------------------------------
     # Riquadro: EN 1993-1-9 (Δσc e Kf auto)
     # -------------------------------------------------
     lf_en = ttk.LabelFrame(container, text="EN 1993-1-9: 2025", padding=10)
     lf_en.grid(row=0, column=0, sticky="ew", pady=(0, 10))
-    lf_en.columnconfigure(1, weight=1)
+    lf_en.columnconfigure(0, minsize=LABEL_COL_PX, weight=0)
+    lf_en.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)
 
     # Etichette e entry per Δσc
     ttk.Label(lf_en, text="Smooth detail category Δσc").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_ds = ttk.Entry(lf_en, width=20)
-    ent_ds.grid(row=0, column=1, sticky="ew")
+    ent_ds = ttk.Entry(lf_en, justify="right", width=20)
+    ent_ds.grid(row=0, column=1, sticky="e")
     ent_ds.insert(0, str(DEFAULTS["delta_sigma_smooth"]))
 
     ttk.Label(lf_en, text="Notch detail category Δσc").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_dn = ttk.Entry(lf_en, width=20)
-    ent_dn.grid(row=1, column=1, sticky="ew")
+    ent_dn = ttk.Entry(lf_en, justify="right", width=20)
+    ent_dn.grid(row=1, column=1, sticky="e")
     ent_dn.insert(0, str(DEFAULTS["delta_sigma_notch"]))
 
     # Funzione per calcolare Kf da Δσc_smooth e Δσc_notch
@@ -169,33 +174,28 @@ def ask_parameters():
 
     # Etichetta e entry per Kf (read-only)
     ttk.Label(lf_en, text="Fatigue notch factor Kf").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_kf = ttk.Entry(lf_en, width=20, state=tk.DISABLED)
-    ent_kf.grid(row=2, column=1, sticky="ew")
+    ent_kf = ttk.Entry(lf_en, justify="right", width=20, state=tk.DISABLED)
+    ent_kf.grid(row=2, column=1, sticky="e")
 
     # Calcola Kf subito dopo il caricamento dei valori predefiniti
     Kf_value = calculate_Kf(DEFAULTS["delta_sigma_smooth"], DEFAULTS["delta_sigma_notch"])
-    ent_kf.insert(0, f"{Kf_value}")  # Inserisci Kf calcolato
-
-    # Riquadro: EN 1993-1-9 (Δσc e Kf auto)
-    lf_en = ttk.LabelFrame(container, text="EN 1993-1-9: 2025", padding=10)
-    lf_en.grid(row=0, column=0, sticky="ew", pady=(0, 10))
-    lf_en.columnconfigure(1, weight=1)
+    ent_kf.insert(0, f"{float(Kf_value):.2f}")  # Inserisci Kf calcolato
 
     # Etichette e entry per Δσc
     ttk.Label(lf_en, text="Smooth detail category Δσc").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_ds = ttk.Entry(lf_en, width=20)
-    ent_ds.grid(row=0, column=1, sticky="ew")
+    ent_ds = ttk.Entry(lf_en, justify="right", width=20)
+    ent_ds.grid(row=0, column=1, sticky="e")
     ent_ds.insert(0, str(DEFAULTS["delta_sigma_smooth"]))
 
     ttk.Label(lf_en, text="Notch detail category Δσc").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_dn = ttk.Entry(lf_en, width=20)
-    ent_dn.grid(row=1, column=1, sticky="ew")
+    ent_dn = ttk.Entry(lf_en, justify="right", width=20)
+    ent_dn.grid(row=1, column=1, sticky="e")
     ent_dn.insert(0, str(DEFAULTS["delta_sigma_notch"]))
 
     # Etichetta e entry per Kf (read-only)
     ttk.Label(lf_en, text="Fatigue notch factor Kf").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_kf = ttk.Entry(lf_en, width=20, state=tk.DISABLED)
-    ent_kf.grid(row=2, column=1, sticky="ew")
+    ent_kf = ttk.Entry(lf_en, justify="right", width=20, state=tk.DISABLED)
+    ent_kf.grid(row=2, column=1, sticky="e")
 
     # Funzione di aggiornamento di Kf
     def update_kf(*_):
@@ -210,7 +210,7 @@ def ask_parameters():
             # Aggiorna Kf
             ent_kf.configure(state=tk.NORMAL)
             ent_kf.delete(0, tk.END)
-            ent_kf.insert(0, "" if val == "" else f"{val}")
+            ent_kf.insert(0, "" if val == "" else f"{val:.2f}")
             ent_kf.configure(state=tk.DISABLED)
         except ValueError:
             pass
@@ -225,70 +225,74 @@ def ask_parameters():
     # -------------------------------------------------
     # Riquadro: UML + fu (prima di Ramberg–Osgood)
     # -------------------------------------------------
-    lf_pr = ttk.LabelFrame(container, text="STEEL'S PROPERTIES", padding=10)
+    lf_pr = ttk.LabelFrame(container, text="Steels's Properties", padding=10)
     lf_pr.grid(row=1, column=0, sticky="ew", pady=(0, 10))
-    lf_pr.columnconfigure(1, weight=1)
+    lf_pr.columnconfigure(0, minsize=LABEL_COL_PX, weight=0)
+    lf_pr.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)
 
     uml_var = tk.BooleanVar(value=True)
     chk_uml = ttk.Checkbutton(lf_pr, text="Uniform Material Law (UML) – Bäumel & Seeger", variable=uml_var)
     chk_uml.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
 
     ttk.Label(lf_pr, text="Young's modulus E").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_E = ttk.Entry(lf_pr, width=20); ent_E.grid(row=1, column=1, sticky="ew"); ent_E.insert(0, str(DEFAULTS["E"]))
+    ent_E = ttk.Entry(lf_pr, justify="right", width=20); ent_E.grid(row=1, column=1, sticky="e"); ent_E.insert(0, str(DEFAULTS["E"]))
 
     ttk.Label(lf_pr, text="Ultimate tensile strength fu").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_fu = ttk.Entry(lf_pr, width=20); ent_fu.grid(row=2, column=1, sticky="ew"); ent_fu.insert(0, str(DEFAULTS["fu"]))
+    ent_fu = ttk.Entry(lf_pr, justify="right", width=20); ent_fu.grid(row=2, column=1, sticky="e"); ent_fu.insert(0, str(DEFAULTS["fu"]))
 
     # -------------------------------------------------
     # Riquadro: Ramberg–Osgood
     # -------------------------------------------------
     lf_ro = ttk.LabelFrame(container, text="Stabilized Cyclic Curve (Ramberg – Osgood)", padding=10)
     lf_ro.grid(row=2, column=0, sticky="ew", pady=(0, 10))
-    lf_ro.columnconfigure(1, weight=1)
+    lf_ro.columnconfigure(0, minsize=LABEL_COL_PX, weight=0)
+    lf_ro.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)
 
     ttk.Label(lf_ro, text="Cyclic hardening coefficient K′").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_Kp = ttk.Entry(lf_ro, width=20); ent_Kp.grid(row=0, column=1, sticky="ew"); ent_Kp.insert(0, str(DEFAULTS["K_prime"]))
+    ent_Kp = ttk.Entry(lf_ro, justify="right", width=20); ent_Kp.grid(row=0, column=1, sticky="e"); ent_Kp.insert(0, str(DEFAULTS["K_prime"]))
 
     ttk.Label(lf_ro, text="Cyclic hardening exponent n′").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_np = ttk.Entry(lf_ro, width=20); ent_np.grid(row=1, column=1, sticky="ew"); ent_np.insert(0, str(DEFAULTS["n_prime"]))
+    ent_np = ttk.Entry(lf_ro, justify="right", width=20); ent_np.grid(row=1, column=1, sticky="e"); ent_np.insert(0, str(DEFAULTS["n_prime"]))
 
     # -------------------------------------------------
     # Riquadro: Smith–Watson–Topper
     # -------------------------------------------------
     lf_swt = ttk.LabelFrame(container, text="Initiation Life Method – ISO 19902:2020", padding=10)
     lf_swt.grid(row=3, column=0, sticky="ew", pady=(0, 10))
-    lf_swt.columnconfigure(1, weight=1)
+    lf_swt.columnconfigure(0, minsize=LABEL_COL_PX, weight=0)
+    lf_swt.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)
 
     ttk.Label(lf_swt, text="Fatigue strength coefficient σ′f").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_sigf = ttk.Entry(lf_swt, width=20); ent_sigf.grid(row=0, column=1, sticky="ew"); ent_sigf.insert(0, str(DEFAULTS["sigma_prime_f"]))
+    ent_sigf = ttk.Entry(lf_swt, justify="right", width=20); ent_sigf.grid(row=0, column=1, sticky="e"); ent_sigf.insert(0, str(DEFAULTS["sigma_prime_f"]))
 
     ttk.Label(lf_swt, text="Fatigue ductility coefficient ε′f").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_epsf = ttk.Entry(lf_swt, width=20); ent_epsf.grid(row=1, column=1, sticky="ew"); ent_epsf.insert(0, str(DEFAULTS["epsilon_prime_f"]))
+    ent_epsf = ttk.Entry(lf_swt, justify="right", width=20); ent_epsf.grid(row=1, column=1, sticky="e"); ent_epsf.insert(0, str(DEFAULTS["epsilon_prime_f"]))
 
     ttk.Label(lf_swt, text="Fatigue strength exponent b").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_b = ttk.Entry(lf_swt, width=20); ent_b.grid(row=2, column=1, sticky="ew"); ent_b.insert(0, str(DEFAULTS["b"]))
+    ent_b = ttk.Entry(lf_swt, justify="right", width=20); ent_b.grid(row=2, column=1, sticky="e"); ent_b.insert(0, str(DEFAULTS["b"]))
 
     ttk.Label(lf_swt, text="Fatigue ductility exponent c").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_c = ttk.Entry(lf_swt, width=20); ent_c.grid(row=3, column=1, sticky="ew"); ent_c.insert(0, str(DEFAULTS["c"]))
+    ent_c = ttk.Entry(lf_swt, justify="right", width=20); ent_c.grid(row=3, column=1, sticky="e"); ent_c.insert(0, str(DEFAULTS["c"]))
 
     # -------------------------------------------------
     # Riquadro: fattori EN 1993 e EN 1998
     # -------------------------------------------------
     lf_fac = ttk.LabelFrame(container, text="EN 1993 e EN 1998", padding=10)
     lf_fac.grid(row=4, column=0, sticky="ew", pady=(0, 10))
-    lf_fac.columnconfigure(1, weight=1)
+    lf_fac.columnconfigure(0, minsize=LABEL_COL_PX, weight=0)
+    lf_fac.columnconfigure(1, minsize=ENTRY_COL_PX, weight=0)
 
-    ttk.Label(lf_fac, text="γM2").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_gM2 = ttk.Entry(lf_fac, width=20); ent_gM2.grid(row=0, column=1, sticky="ew"); ent_gM2.insert(0, str(DEFAULTS["gamma_M2"]))
+    ttk.Label(lf_fac, text="Partial factor γM2").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gM2 = ttk.Entry(lf_fac, justify="right", width=20); ent_gM2.grid(row=0, column=1, sticky="e"); ent_gM2.insert(0, str(DEFAULTS["gamma_M2"]))
 
-    ttk.Label(lf_fac, text="γov").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_gov = ttk.Entry(lf_fac, width=20); ent_gov.grid(row=1, column=1, sticky="ew"); ent_gov.insert(0, str(DEFAULTS["gamma_ov"]))
+    ttk.Label(lf_fac, text="Overstrength factor γov").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gov = ttk.Entry(lf_fac, justify="right", width=20); ent_gov.grid(row=1, column=1, sticky="e"); ent_gov.insert(0, str(DEFAULTS["gamma_ov"]))
 
-    ttk.Label(lf_fac, text="γI").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_gI = ttk.Entry(lf_fac, width=20); ent_gI.grid(row=2, column=1, sticky="ew"); ent_gI.insert(0, str(DEFAULTS["gamma_I"]))
+    ttk.Label(lf_fac, text="Importance factor γI").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gI = ttk.Entry(lf_fac, justify="right", width=20); ent_gI.grid(row=2, column=1, sticky="e"); ent_gI.insert(0, str(DEFAULTS["gamma_I"]))
 
-    ttk.Label(lf_fac, text="γFE").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
-    ent_gFE = ttk.Entry(lf_fac, width=20); ent_gFE.grid(row=3, column=1, sticky="ew"); ent_gFE.insert(0, str(DEFAULTS["gamma_FE"]))
+    ttk.Label(lf_fac, text="Model factor γFE").grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
+    ent_gFE = ttk.Entry(lf_fac, justify="right", width=20); ent_gFE.grid(row=3, column=1, sticky="e"); ent_gFE.insert(0, str(DEFAULTS["gamma_FE"]))
 
     # -------------------------------------------------
     # Colonna destra: immagine formule
@@ -300,7 +304,7 @@ def ask_parameters():
         if not img_path.exists():
             img_path = resource_path("assets/formulas.png")
         img = Image.open(img_path)
-        img.thumbnail((int(260*1.73), int(500*1.73)))
+        img.thumbnail((int(260*2.068), int(500*2.068)))
         photo = ImageTk.PhotoImage(img)
         lbl_img = ttk.Label(lf_img, image=photo); lbl_img.image = photo; lbl_img.pack()
     except Exception as e:
@@ -327,7 +331,7 @@ def ask_parameters():
         # Aggiorna contenuti (temporaneamente abilita per scrivere)
         for w in uml_targets:
             w.configure(state=tk.NORMAL)
-        ent_Kp.delete(0, tk.END);   ent_Kp.insert(0, f"{vals['K_prime']}")
+        ent_Kp.delete(0, tk.END);   ent_Kp.insert(0, f"{vals['K_prime']:.2f}")
         ent_np.delete(0, tk.END);   ent_np.insert(0, f"{vals['n_prime']}")
         ent_sigf.delete(0, tk.END); ent_sigf.insert(0, f"{vals['sigma_prime_f']}")
         ent_epsf.delete(0, tk.END); ent_epsf.insert(0, f"{vals['epsilon_prime_f']}")
