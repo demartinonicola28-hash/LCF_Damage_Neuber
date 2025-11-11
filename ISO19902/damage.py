@@ -48,10 +48,10 @@ def calcola_n_b(D_ni: Sequence[float], gamma_I: float, gamma_ov: float) -> Tuple
       - D_ni  = n_i / N_f --> Sequence[float]
       - n_b   = D_tot / sum(D_ni)
     """
-    D_tot = 1 * gamma_I * 1.1 * gamma_ov
+    D_tot = 1 
     D_ni = np.asarray(D_ni, dtype=float)
     sum_D_ni = np.nansum(D_ni)
-    n_b = np.divide(D_tot, sum_D_ni, out=np.array(np.inf, dtype=float),
+    n_b = np.divide(D_tot, sum_D_ni * gamma_I * 1.1 * gamma_ov, out=np.array(np.inf, dtype=float),
                           where=(sum_D_ni != 0) & np.isfinite(sum_D_ni))
     #print(f"sum D_ni: {sum_D_ni}")
     return n_b, sum_D_ni

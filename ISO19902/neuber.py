@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import fsolve
 from typing import List, Tuple
+import matplotlib.pyplot as plt
 
 def calcola_sigma_r(Kf: float, S_r: List[float], E: float, K_prime: float,
                     n_prime: float, gamma_M2: float, gamma_FE: float) -> List[float]:
@@ -52,3 +53,4 @@ def calcola_sigma_p(S_0: List[float], S_r: List[float], Kf: float, E: float,
         sigma_p = float(fsolve(equation, x0=x0)[0])
         sigma_p_values.append(max(sigma_p, 0.0))
     return sigma_p_values
+

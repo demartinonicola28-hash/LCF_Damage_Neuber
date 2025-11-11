@@ -33,8 +33,9 @@ def plot_S_t(time, S):
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     plt.title('Storia Tensionale a 1,5t dall\'Intaglio')
-    plt.grid(True)
-    plt.savefig("plot/S_vs_time.png", dpi=600, format="jpg")
+    plt.grid(True, linestyle=":", linewidth=0.7)
+    plt.tight_layout()
+    plt.savefig("plot/S_vs_time.png", dpi=600)
     plt.show()
 
 # S_t.py
@@ -75,7 +76,7 @@ def calcola_S_p(S, time) -> Tuple[List[float], List[int]]:
     step = list(range(1, len(S_p) + 1))
     return S_p, step
 
-def plot_S_step(step: List[int], S_p: List[float], title: str = "Spettro in Input al Rainflow"):
+def plot_S_p_step(step: List[int], S_p: List[float], title: str = "Spettro in Input al Rainflow"):
     step = np.asarray(step)
     S_p = np.asarray(S_p, dtype=float)
     if step.size != S_p.size:
@@ -97,5 +98,5 @@ def plot_S_step(step: List[int], S_p: List[float], title: str = "Spettro in Inpu
     plt.title(title)
     plt.grid(True, linestyle=":", linewidth=0.7)
     plt.tight_layout()
-    plt.savefig("plot/S_vs_step.png", dpi=600, format="jpg")
+    plt.savefig("plot/S_vs_step.png", dpi=600)
     plt.show()
