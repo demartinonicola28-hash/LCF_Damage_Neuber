@@ -132,8 +132,8 @@ def ask_parameters():
         globals().update(out)
         return out
 
-    root.title("Low-Cycle Fatigue Analysis with Neuber's Method")
-    root.geometry("1080x740")
+    root.title("Low Cycle Fatigue Analysis with Neuber's Method")
+    root.geometry("1080x850")
     root.resizable(False, False)          # <-- blocca le frecce/drag
     #root.minsize(1200, 500)
     set_app_icon(root, "icona.ico")

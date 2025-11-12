@@ -256,7 +256,7 @@ def mostra_tabella(S_r, S_0, n_i):
     # Avvia il loop della finestra
     window.mainloop()
 
-def salva_rainflow(S_r, S_0, n_i, filename="n_Sr_S0.txt"):
+def salva_rainflow(S_r, S_0, n_i, filename="signal_rainflow/n_Sr_S0.txt"):
     """
     Salva i valori di n, S_r e S_0 in un file di testo.
     Ogni riga contiene i valori n (reversals), S_r (stress range), e S_0 (mean stress).
@@ -265,7 +265,7 @@ def salva_rainflow(S_r, S_0, n_i, filename="n_Sr_S0.txt"):
         S_r (list): Lista dei valori di S_r (stress range).
         S_0 (list): Lista dei valori di S_0 (mean stress).
         n_i (list): Lista dei valori di n (numero di reversals).
-        filename (str): Nome del file in cui salvare i dati (default: "n_Sr_S0.txt").
+        filename (str): Nome del file in cui salvare i dati (default: "signal_rainflow/n_Sr_S0.txt").
     """
     try:
         with open(filename, "w") as f:
