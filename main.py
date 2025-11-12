@@ -15,7 +15,7 @@ from ISO19902.stress_strain_re import calcola_sigma_re, calcola_epsilon_re, plot
 from ISO19902.initiation_life import calcola_N_f
 from ISO19902.damage import calcola_D, calcola_n_b
 from ISO19902.stress_strain_re import plot_sigma_re, plot_epsilon_re
-from result_export import export_fatica
+from result.result_export import export_fatica
 
 
 # --- STEP 1: CARICA DATI ---
@@ -120,7 +120,7 @@ print(f"n: {N_f.size}")
 print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
 
-# --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---
+# --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---j
 D_tot, D_ni, n_i, n_tot = calcola_D(N_f, n_i, gamma_I, gamma_ov)
 print(f"n_i[0:{k}]: {n_i[:k].tolist()}")
 print(f"D_ni[0:{k}]: {D_ni[:k].tolist()}")
