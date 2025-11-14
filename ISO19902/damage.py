@@ -63,6 +63,15 @@ def calcola_n_b(D_ni_d: Sequence[float], gamma_I: float, gamma_ov: float) -> Tup
     return n_b, sum_D_ni
 
 
+
+
+from typing import Sequence, Optional
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm, colors
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+
 def plot_damage_3d(S_r: Sequence[float],
                    S_0: Sequence[float],
                    D_ni_d: Sequence[float],
@@ -70,8 +79,8 @@ def plot_damage_3d(S_r: Sequence[float],
                    delta_S_0: float = 50.0,
                    tick_Sr: Optional[float] = None,
                    tick_S0: Optional[float] = None,
-                   zmin: Optional[float] = None,
-                   zmax: Optional[float] = None,
+                   Dmin: Optional[float] = None,
+                   Dmax: Optional[float] = None,
                    tick_D: Optional[float] = None) -> None:
     """
     Istogramma 3D del danno:
@@ -79,11 +88,10 @@ def plot_damage_3d(S_r: Sequence[float],
       - asse Y: S_r (range)
       - asse Z: somma D_ni_d nel quadrato (S_r, S_0).
 
-    I quadrati in piano hanno lato delta_S_0 (X) e delta_S_r (Y).
-
-    tick_S0, tick_Sr (se forniti) definiscono il passo delle tacche sugli assi X e Y.
-    zmin, zmax (se forniti) fissano i limiti dell'asse Z e della scala colori.
-    tick_D (se fornito) è il passo delle tacche sull'asse Z.
+    delta_S_r, delta_S_0 : dimensioni dei quadrati.
+    tick_S0, tick_Sr     : passo delle tacche sugli assi X e Y (se forniti).
+    Dmin, Dmax           : limiti asse Z e scala colori (se forniti).
+    tick_D               : passo delle tacche su asse Z e colorbar (se fornito).
     """
 
     # --- conversione e filtri base ---
@@ -95,21 +103,19 @@ def plot_damage_3d(S_r: Sequence[float],
         raise ValueError("S_r, S_0 e D_ni_d devono avere la stessa lunghezza.")
 
     m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(D_ni_d) & (D_ni_d > 0.0)
-    S_r = S_r[m]
-    S_0 = S_0[m]
-    D_ni_d = D_ni_d[m]
+    S_r, S_0, D_ni_d = S_r[m], S_0[m], D_ni_d[m]
 
     if S_r.size == 0:
         raise ValueError("Nessun punto valido per il plot (danni non finiti o non positivi).")
 
-    # --- definizione dei bin: ORA X = S_0, Y = S_r ---
-    s0_min, s0_max = np.min(S_0), np.max(S_0)
-    sr_min, sr_max = np.min(S_r), np.max(S_r)
+    # --- bin (X = S_0, Y = S_r) ---
+    s0_min, s0_max = float(np.min(S_0)), float(np.max(S_0))
+    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
 
     s0_min = np.floor(s0_min / delta_S_0) * delta_S_0
-    s0_max = np.ceil(s0_max / delta_S_0) * delta_S_0
+    s0_max = np.ceil(s0_max  / delta_S_0) * delta_S_0
     sr_min = np.floor(sr_min / delta_S_r) * delta_S_r
-    sr_max = np.ceil(sr_max / delta_S_r) * delta_S_r
+    sr_max = np.ceil(sr_max  / delta_S_r) * delta_S_r
 
     S_0_bins = np.arange(s0_min, s0_max + delta_S_0, delta_S_0)  # X
     S_r_bins = np.arange(sr_min, sr_max + delta_S_r, delta_S_r)  # Y
@@ -121,10 +127,9 @@ def plot_damage_3d(S_r: Sequence[float],
         weights=D_ni_d
     )
 
-    # colonne ancorate agli spigoli dei quadrati: X = S_0, Y = S_r
-    x_left = xedges[:-1]      # estremi sinistri dei bin in S_0 (asse X)
-    y_front = yedges[:-1]     # estremi anteriori dei bin in S_r (asse Y)
-
+    # colonne ancorate agli spigoli
+    x_left = xedges[:-1]
+    y_front = yedges[:-1]
     Xl, Yf = np.meshgrid(x_left, y_front, indexing="ij")
 
     xpos = Xl.ravel()
@@ -133,43 +138,36 @@ def plot_damage_3d(S_r: Sequence[float],
 
     dz = H.ravel()
     nonzero = dz > 0.0
-    xpos = xpos[nonzero]
-    ypos = ypos[nonzero]
-    zpos = zpos[nonzero]
-    dz = dz[nonzero]
+    xpos, ypos, zpos, dz = xpos[nonzero], ypos[nonzero], zpos[nonzero], dz[nonzero]
 
     if dz.size == 0:
         raise ValueError("Tutti i quadrati hanno danno nullo (dz == 0).")
 
-    dx = (xedges[1] - xedges[0]) * np.ones_like(dz)  # in S_0
-    dy = (yedges[1] - yedges[0]) * np.ones_like(dz)  # in S_r
+    dx = (xedges[1] - xedges[0]) * np.ones_like(dz)
+    dy = (yedges[1] - yedges[0]) * np.ones_like(dz)
 
-    # --- limiti Z / scala colori ---
-    auto_zmin = float(np.min(dz))
-    auto_zmax = float(np.max(dz))
-    if zmin is None:
-        zmin_plot = 0.0
-        zmin_norm = auto_zmin
+    # --- limiti Dmin/Dmax condivisi asse Z + colorbar ---
+    auto_Dmin = float(np.min(dz))
+    auto_Dmax = float(np.max(dz))
+
+    if Dmin is None:
+        Dmin_plot = 0.0
     else:
-        zmin_plot = zmin
-        zmin_norm = zmin
+        Dmin_plot = Dmin
 
-    if zmax is None:
-        zmax_plot = auto_zmax * 1.05
-        zmax_norm = auto_zmax
+    if Dmax is None:
+        Dmax_plot = float(np.ceil(auto_Dmax))
     else:
-        zmax_plot = zmax
-        zmax_norm = zmax
+        Dmax_plot = Dmax
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection="3d")
 
-    # colori in funzione del danno (norm stessa di asse Z)
-    norm = colors.Normalize(vmin=zmin_norm, vmax=zmax_norm)
+    norm = colors.Normalize(vmin=Dmin_plot, vmax=Dmax_plot)
     cmap = cm.viridis
     bar_colors = cmap(norm(dz))
 
-    # ordinamento manuale "back-to-front"
+    # ordinamento back-to-front
     depth = xpos + ypos
     order = np.argsort(depth)
 
@@ -188,7 +186,7 @@ def plot_damage_3d(S_r: Sequence[float],
     ax.set_zlabel(r"Danno $D_{ni,d}$")
     ax.set_title("Istogramma 3D del danno per quadrati (S_r, S_0)")
 
-    # --- ticks sugli assi (X = S_0, Y = S_r) ---
+    # ticks X/Y
     if tick_S0 is not None and tick_S0 > 0.0:
         xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
         ax.set_xticks(xticks)
@@ -203,24 +201,31 @@ def plot_damage_3d(S_r: Sequence[float],
 
     ax.set_xlim(s0_min, s0_max)
     ax.set_ylim(sr_min, sr_max)
-    ax.set_zlim(zmin_plot, zmax_plot)
+    ax.set_zlim(Dmin_plot, Dmax_plot)
 
-    # ticks Z se richiesti
+    # ticks Z + colorbar coerenti
     if tick_D is not None and tick_D > 0.0:
-        zticks = np.arange(zmin_plot, zmax_plot + tick_D, tick_D)
+        zticks = np.arange(Dmin_plot, Dmax_plot + 0.5 * tick_D, tick_D)
         ax.set_zticks(zticks)
 
-    # colorbar legata al danno
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
     mappable.set_array(dz)
     cbar = fig.colorbar(mappable, ax=ax, shrink=0.7)
     cbar.set_label(r"Danno $D_{ni,d}$")
+
+    if tick_D is not None and tick_D > 0.0:
+        cbar.set_ticks(zticks)
 
     ax.view_init(elev=25, azim=45)
     ax.dist = 10
 
     plt.tight_layout()
     plt.show()
+
+
+from typing import Sequence, Optional
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def plot_damage_map(S_r: Sequence[float],
@@ -240,9 +245,9 @@ def plot_damage_map(S_r: Sequence[float],
       - colore: somma D_ni_d nel quadrato (S_r, S_0).
 
     delta_S_r, delta_S_0: dimensione dei quadrati.
-    tick_S0, tick_Sr: passo delle tacche sugli assi X e Y (se forniti).
-    Dmin, Dmax: limiti della scala colori (se forniti).
-    tick_D: passo delle tacche sulla colorbar (se fornito).
+    tick_S0, tick_Sr     : passo delle tacche sugli assi X e Y (se forniti).
+    Dmin, Dmax           : limiti della scala colori (se forniti).
+    tick_D               : passo delle tacche sulla colorbar (se fornito).
     """
 
     # --- conversione e filtri base ---
@@ -254,16 +259,14 @@ def plot_damage_map(S_r: Sequence[float],
         raise ValueError("S_r, S_0 e D_ni_d devono avere la stessa lunghezza.")
 
     m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(D_ni_d) & (D_ni_d > 0.0)
-    S_r = S_r[m]
-    S_0 = S_0[m]
-    D_ni_d = D_ni_d[m]
+    S_r, S_0, D_ni_d = S_r[m], S_0[m], D_ni_d[m]
 
     if S_r.size == 0:
         raise ValueError("Nessun punto valido per il plot (danni non finiti o non positivi).")
 
-    # --- definizione dei bin (X = S_0, Y = S_r) ---
-    s0_min, s0_max = np.min(S_0), np.max(S_0)
-    sr_min, sr_max = np.min(S_r), np.max(S_r)
+    # --- bin (X = S_0, Y = S_r) ---
+    s0_min, s0_max = float(np.min(S_0)), float(np.max(S_0))
+    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
 
     s0_min = np.floor(s0_min / delta_S_0) * delta_S_0
     s0_max = np.ceil(s0_max  / delta_S_0) * delta_S_0
@@ -282,15 +285,16 @@ def plot_damage_map(S_r: Sequence[float],
 
     H = np.where(H > 0.0, H, np.nan)
 
-    # limiti automatici del danno
-    auto_Dmin = np.nanmin(H)
-    auto_Dmax = np.nanmax(H)
+    auto_Dmin = float(np.nanmin(H))
+    auto_Dmax = float(np.nanmax(H))
+
     if Dmin is None:
-        Dmin_plot = auto_Dmin
+        Dmin_plot = 0.0
     else:
         Dmin_plot = Dmin
+
     if Dmax is None:
-        Dmax_plot = auto_Dmax
+        Dmax_plot = float(np.ceil(auto_Dmax))
     else:
         Dmax_plot = Dmax
 
@@ -304,7 +308,7 @@ def plot_damage_map(S_r: Sequence[float],
     ax.set_ylabel(r"Range $S_r$")
     ax.set_title("Mappa 2D del danno per quadrati (S_r, S_0)")
 
-    # ticks sugli assi
+    # ticks assi
     if tick_S0 is not None and tick_S0 > 0.0:
         xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
         ax.set_xticks(xticks)
@@ -324,7 +328,7 @@ def plot_damage_map(S_r: Sequence[float],
     cbar.set_label(r"Danno $D_{ni,d}$")
 
     if tick_D is not None and tick_D > 0.0:
-        Dticks = np.arange(Dmin_plot, Dmax_plot + tick_D, tick_D)
+        Dticks = np.arange(Dmin_plot, Dmax_plot + 0.5 * tick_D, tick_D)
         cbar.set_ticks(Dticks)
 
     ax.grid(True, linestyle=":", linewidth=0.5)

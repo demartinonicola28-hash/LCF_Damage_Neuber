@@ -32,13 +32,13 @@ time, VM, P11, P22 = app.data  # Ottieni i dati da `carica_dati.py`
 # --- STEP 2: CALCOLA IL VETTORE S ---
 # Calcola il vettore S usando la funzione di `S_t.py`
 S = calcola_S(VM, P11, P22)
-plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
+#plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
 print(f"S[0:5]: {S[:5]}")
 
 
 # --- STEP 3: "PULIRE" IL SEGNALE" (picchi e valli) ---
 S_p, step = calcola_S_p(S, time)
-plot_S_p_step(step, S_p)
+#plot_S_p_step(step, S_p)
 print(f"n_Sp: {len(S_p)}")
 
 
@@ -50,15 +50,14 @@ salva_rainflow(S_r, S_0, n_i)  # Salva i risultati usando salva_rainflow da `rai
 plot_rainflow_3d(S_r, S_0, n_i,
                  delta_S_r=50, delta_S_0=5,
                  tick_Sr=200, tick_S0=20,
-                 zmin=0, zmax=10, tick_n=2)
-
+                 nmin=0, nmax=None, tick_n=0.5)
 # Mappa 2D con stessa discretizzazione e scala colori 0–50
 plot_rainflow_map(S_r, S_0, n_i,
                  delta_S_r=50, delta_S_0=5,
                  tick_Sr=200, tick_S0=20,
-                  nmin=0, nmax=10, tick_n=2)
+                  nmin=0, nmax=None, tick_n=0.5)
 
-mostra_tabella(S_r, S_0, n_i)  # Mostra la tabella dei risultati
+#mostra_tabella(S_r, S_0, n_i)  # Mostra la tabella dei risultati
 
 print(f"Sr: {len(S_r)}")
 print(f"S0: {len(S_0)}")
@@ -116,9 +115,9 @@ print(f"sigma_a: {len(sigma_a)}")
 print(f"sigma_re: {len(sigma_re)}")
 print(f"epsilon_re: {len(epsilon_re)}")
 
-plot_sigma_re(sigma_re, n_i, sort_desc=True)
-plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
-plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
+#plot_sigma_re(sigma_re, n_i, sort_desc=True)
+#plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
+#plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
 
 # --- STEP 8: STRAIN LIFE (SWT) --->  [N_f] ---
 N_f = np.asarray(
@@ -134,25 +133,24 @@ print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
 # --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---j
 D_tot, D_ni_d, n_i, n_tot = calcola_D(N_f, n_i, gamma_I, gamma_ov)
+n_b, sum_D_ni = calcola_n_b(D_ni_d, gamma_I, gamma_ov)
+
 print(f"n_i[0:{k}]: {n_i[:k].tolist()}")
 print(f"D_ni[0:{k}]: {D_ni_d[:k].tolist()}")
+print(f"sum_D_ni: {sum_D_ni}")
 print(f"n_tot: {n_tot}")
 print(f"D_tot: {D_tot}")
-n_b, sum_D_ni = calcola_n_b(D_ni_d, gamma_I, gamma_ov)
 print(f"n_b: {n_b:.1f} blocks")
-print(f"sum_D_ni: {sum_D_ni}")
 
 plot_damage_3d(S_r, S_0, D_ni_d,
-    delta_S_r=200, delta_S_0=10,     # range dell'istogramma
-    tick_Sr=100, tick_S0=10 ,       # range dei valori sugli assi x e y
-    zmin=0.0, zmax=1, tick_D=0.1
-)
+    delta_S_r=250, delta_S_0=20,        # range dell'istogramma
+    tick_Sr=250, tick_S0=20 ,           # range dei valori sugli assi x e y
+    Dmin=0.0, Dmax=None, tick_D=0.5)
 
 plot_damage_map(S_r, S_0, D_ni_d,
-    delta_S_r=100, delta_S_0=10,
-    tick_Sr=200, tick_S0=20,
-    Dmin=0.0, Dmax=1, tick_D=0.1
-)
+    delta_S_r=250, delta_S_0=20,
+    tick_Sr=250, tick_S0=20,
+    Dmin=0.0, Dmax=None, tick_D=0.5)
 
 # --- STEP 10: EXPORT DATA ---
 xlsx_path = export_fatica(
