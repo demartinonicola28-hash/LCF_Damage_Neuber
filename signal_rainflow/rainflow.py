@@ -4,11 +4,13 @@ from collections import deque, defaultdict
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
-import numpy as np
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from typing import Sequence, Optional
+from matplotlib import cm, colors
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
 
 
 # Funzione per calcolare il segno della somma P11 + P22
@@ -95,116 +97,251 @@ def rainflow_counting(S):
 
     return S_r, S_0, n_i
 
-# Funzione per plottare la matrice 3D
-def plot_rainflow(S_r, S_0, n_i, delta_S_r=10.0, delta_S_0=5.0):
-    """
-    Istogramma 3D della matrice rainflow con:
-      - colormap 'Spectral_r'
-      - colorbar al 50% di altezza, esterna a destra
-      - tick colorbar ogni 0.5
-      - assi X (S_r) e Y (S_0) da floor(min) a ceil(max)
-    """
-    # --- import locali
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.ticker import FormatStrFormatter
-    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-    # ----- 1) Sanitizzazione input
+def plot_rainflow_3d(S_r: Sequence[float],
+                     S_0: Sequence[float],
+                     n_i: Sequence[float],
+                     delta_S_r: float = 10.0,
+                     delta_S_0: float = 5.0,
+                     tick_Sr: Optional[float] = None,
+                     tick_S0: Optional[float] = None,
+                     zmin: Optional[float] = None,
+                     zmax: Optional[float] = None,
+                     tick_n: Optional[float] = None) -> None:
+    """
+    Istogramma 3D della matrice rainflow:
+      - asse X: S_0 (mean stress)
+      - asse Y: S_r (stress range)
+      - asse Z: somma n_i nel quadrato (S_r, S_0).
+    """
+
     S_r = np.asarray(S_r, dtype=float).ravel()
     S_0 = np.asarray(S_0, dtype=float).ravel()
     n_i = np.asarray(n_i, dtype=float).ravel()
-    m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(n_i)
+
+    if not (S_r.size == S_0.size == n_i.size):
+        raise ValueError("S_r, S_0 e n_i devono avere la stessa lunghezza.")
+
+    m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(n_i) & (n_i > 0.0)
     S_r, S_0, n_i = S_r[m], S_0[m], n_i[m]
 
-    # ----- 2) Estremi reali e arrotondati a integer
-    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
+    if S_r.size == 0:
+        raise ValueError("Nessun punto valido per il plot (n_i non finiti o non positivi).")
+
+    # estremi (X = S_0, Y = S_r)
     s0_min, s0_max = float(np.min(S_0)), float(np.max(S_0))
-    sr_lo, sr_hi = np.floor(sr_min), np.ceil(sr_max)   # ⌊min⌋, ⌈max⌉ per S_r
-    s0_lo, s0_hi = np.floor(s0_min), np.ceil(s0_max)   # ⌊min⌋, ⌈max⌉ per S_0
+    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
 
-    # ----- 3) Bin edges allineati agli estremi arrotondati
-    # Se range nullo, forzo almeno un bin usando i delta
-    if sr_hi == sr_lo:
-        S_r_bins = np.array([sr_lo, sr_lo + delta_S_r])
-    else:
-        S_r_bins = np.arange(sr_lo, sr_hi + delta_S_r, delta_S_r)
+    s0_min = np.floor(s0_min / delta_S_0) * delta_S_0
+    s0_max = np.ceil(s0_max  / delta_S_0) * delta_S_0
+    sr_min = np.floor(sr_min / delta_S_r) * delta_S_r
+    sr_max = np.ceil(sr_max  / delta_S_r) * delta_S_r
 
-    if s0_hi == s0_lo:
-        S_0_bins = np.array([s0_lo, s0_lo + delta_S_0])
-    else:
-        S_0_bins = np.arange(s0_lo, s0_hi + delta_S_0, delta_S_0)
+    S_0_bins = np.arange(s0_min, s0_max + delta_S_0, delta_S_0)  # X
+    S_r_bins = np.arange(sr_min, sr_max + delta_S_r, delta_S_r)  # Y
 
-    # ----- 4) Istogramma 2D pesato
-    H, xedges, yedges = np.histogram2d(S_r, S_0, bins=[S_r_bins, S_0_bins], weights=n_i)
-
-    # ----- 5) Centri cella e dimensioni barre
-    xcenters = 0.5 * (xedges[:-1] + xedges[1:])
-    ycenters = 0.5 * (yedges[:-1] + yedges[1:])
-    DXv = np.diff(xedges); DYv = np.diff(yedges)
-    Xc, Yc = np.meshgrid(xcenters, ycenters, indexing="ij")
-    DX, DY = np.meshgrid(DXv, DYv, indexing="ij")
-
-    xpos = Xc.ravel(); ypos = Yc.ravel(); zpos = np.zeros_like(xpos)
-    dx = DX.ravel(); dy = DY.ravel(); dz = H.ravel()
-
-    # ----- 6) Filtra celle vuote
-    mask = dz > 0
-    if not np.any(mask):
-        fig = plt.figure(figsize=(12, 8)); ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel('S_r (Stress Range)'); ax.set_ylabel('S_0 (Mean Stress)'); ax.set_zlabel('n (Reversals)')
-        ax.set_title('Matrice Rainflow (vuota)')
-        # Limiti assi anche se vuoto
-        ax.set_xlim(sr_lo, sr_hi); ax.set_ylim(s0_lo, s0_hi)
-        plt.tight_layout(); plt.show(); return
-
-    xpos, ypos, zpos = xpos[mask], ypos[mask], zpos[mask]
-    dx, dy, dz = dx[mask], dy[mask], dz[mask]
-
-    # ----- 7) Colori con 'Spectral_r'
-    cmap = plt.cm.get_cmap('Spectral_r')
-    vmin, vmax = float(np.min(dz)), float(np.max(dz))
-    if vmin == vmax: vmin = 0.0
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    colors = sm.to_rgba(dz)
-
-    # ----- 8) Figura e barre
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors, zsort='average')
-
-    # ----- 9) Etichette e limiti assi arrotondati
-    ax.set_xlabel('S_r (Stress Range)')
-    ax.set_ylabel('S_0 (Mean Stress)')
-    ax.set_zlabel('n (Reversals)')
-    ax.set_title('Matrice Rainflow')
-    ax.set_xlim(sr_lo, sr_hi)   # imposta X da ⌊min⌋ a ⌈max⌉
-    ax.set_ylim(s0_lo, s0_hi)   # imposta Y da ⌊min⌋ a ⌈max⌉
-    ax.set_zlim(0, 5)           # imposta z da ⌊min⌋ a ⌈max⌉
-
-    # ----- 10) Colorbar al 50% fuori a destra
-    cb_ax = inset_axes(
-        ax,
-        width="3%", height="50%",          # dimensioni desiderate
-        bbox_to_anchor=(1.05, 0.0, 1, 1),  # tutta a destra, esterna
-        bbox_transform=ax.transAxes,
-        loc="center left",
-        borderpad=0
+    # istogramma 2D pesato: primo argomento X (S_0), secondo Y (S_r)
+    H, xedges, yedges = np.histogram2d(
+        S_0, S_r,
+        bins=[S_0_bins, S_r_bins],
+        weights=n_i
     )
-    cbar = plt.colorbar(sm, cax=cb_ax, orientation='vertical')
-    cbar.set_label('Numero di cicli (peso n_i)', fontsize=11)
 
-    # ----- 11) Tick colorbar ogni 0.5
-    step = 0.5
-    lo = np.floor(vmin / step) * step
-    hi = np.ceil(vmax / step) * step
-    cbar.set_ticks(np.arange(lo, hi + 1e-12, step))
-    cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    # colonne ancorate agli spigoli
+    x_left = xedges[:-1]      # S_0
+    y_front = yedges[:-1]     # S_r
+    Xl, Yf = np.meshgrid(x_left, y_front, indexing="ij")
 
-    # ----- 12) Layout e show
+    xpos = Xl.ravel()
+    ypos = Yf.ravel()
+    zpos = np.zeros_like(xpos)
+
+    dz = H.ravel()
+    nonzero = dz > 0.0
+    xpos, ypos, zpos, dz = xpos[nonzero], ypos[nonzero], zpos[nonzero], dz[nonzero]
+
+    if dz.size == 0:
+        raise ValueError("Tutti i quadrati hanno n_i nullo (dz == 0).")
+
+    dx = (xedges[1] - xedges[0]) * np.ones_like(dz)  # in S_0
+    dy = (yedges[1] - yedges[0]) * np.ones_like(dz)  # in S_r
+
+    # limiti Z / scala colori
+    auto_zmin = float(np.min(dz))
+    auto_zmax = float(np.max(dz))
+    if zmin is None:
+        zmin_plot = 0.0
+        zmin_norm = auto_zmin
+    else:
+        zmin_plot = zmin
+        zmin_norm = zmin
+    if zmax is None:
+        zmax_plot = auto_zmax * 1.05
+        zmax_norm = auto_zmax
+    else:
+        zmax_plot = zmax
+        zmax_norm = zmax
+
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection="3d")
+
+    cmap = cm.Spectral_r
+    norm = colors.Normalize(vmin=zmin_norm, vmax=zmax_norm)
+    bar_colors = cmap(norm(dz))
+
+    # ordinamento back-to-front
+    depth = xpos + ypos
+    order = np.argsort(depth)
+
+    for i in order:
+        ax.bar3d(
+            xpos[i], ypos[i], zpos[i],
+            dx[i], dy[i], dz[i],
+            color=bar_colors[i],
+            shade=False,
+            edgecolor="k",
+            linewidth=0.3,
+        )
+
+    ax.set_xlabel(r"Mean $S_0$")
+    ax.set_ylabel(r"Range $S_r$")
+    ax.set_zlabel(r"n (reversals)")
+    ax.set_title("Matrice rainflow – istogramma 3D")
+
+    # ticks X/Y
+    if tick_S0 is not None and tick_S0 > 0.0:
+        xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
+        ax.set_xticks(xticks)
+    else:
+        ax.set_xticks(S_0_bins)
+
+    if tick_Sr is not None and tick_Sr > 0.0:
+        yticks = np.arange(sr_min, sr_max + tick_Sr, tick_Sr)
+        ax.set_yticks(yticks)
+    else:
+        ax.set_yticks(S_r_bins)
+
+    ax.set_xlim(s0_min, s0_max)
+    ax.set_ylim(sr_min, sr_max)
+    ax.set_zlim(zmin_plot, zmax_plot)
+
+    if tick_n is not None and tick_n > 0.0:
+        zticks = np.arange(zmin_plot, zmax_plot + tick_n, tick_n)
+        ax.set_zticks(zticks)
+
+    mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
+    mappable.set_array(dz)
+    cbar = fig.colorbar(mappable, ax=ax, shrink=0.7)
+    cbar.set_label(r"n (reversals)")
+
+    ax.view_init(elev=25, azim=45)
+    ax.dist = 10
+
     plt.tight_layout()
     plt.show()
+
+
+def plot_rainflow_map(S_r: Sequence[float],
+                      S_0: Sequence[float],
+                      n_i: Sequence[float],
+                      delta_S_r: float = 10.0,
+                      delta_S_0: float = 5.0,
+                      tick_Sr: Optional[float] = None,
+                      tick_S0: Optional[float] = None,
+                      nmin: Optional[float] = None,
+                      nmax: Optional[float] = None,
+                      tick_n: Optional[float] = None) -> None:
+    """
+    Mappa 2D della matrice rainflow:
+      - asse X: S_0 (mean stress)
+      - asse Y: S_r (stress range)
+      - colore: somma n_i nel quadrato (S_r, S_0).
+    """
+
+    S_r = np.asarray(S_r, dtype=float).ravel()
+    S_0 = np.asarray(S_0, dtype=float).ravel()
+    n_i = np.asarray(n_i, dtype=float).ravel()
+
+    if not (S_r.size == S_0.size == n_i.size):
+        raise ValueError("S_r, S_0 e n_i devono avere la stessa lunghezza.")
+
+    m = np.isfinite(S_r) & np.isfinite(S_0) & np.isfinite(n_i) & (n_i > 0.0)
+    S_r, S_0, n_i = S_r[m], S_0[m], n_i[m]
+
+    if S_r.size == 0:
+        raise ValueError("Nessun punto valido per il plot (n_i non finiti o non positivi).")
+
+    # estremi (X = S_0, Y = S_r)
+    s0_min, s0_max = float(np.min(S_0)), float(np.max(S_0))
+    sr_min, sr_max = float(np.min(S_r)), float(np.max(S_r))
+
+    s0_min = np.floor(s0_min / delta_S_0) * delta_S_0
+    s0_max = np.ceil(s0_max  / delta_S_0) * delta_S_0
+    sr_min = np.floor(sr_min / delta_S_r) * delta_S_r
+    sr_max = np.ceil(sr_max  / delta_S_r) * delta_S_r
+
+    S_0_bins = np.arange(s0_min, s0_max + delta_S_0, delta_S_0)  # X
+    S_r_bins = np.arange(sr_min, sr_max + delta_S_r, delta_S_r)  # Y
+
+    # istogramma 2D pesato
+    H, xedges, yedges = np.histogram2d(
+        S_0, S_r,
+        bins=[S_0_bins, S_r_bins],
+        weights=n_i
+    )
+
+    H = np.where(H > 0.0, H, np.nan)
+
+    auto_nmin = np.nanmin(H)
+    auto_nmax = np.nanmax(H)
+    if nmin is None:
+        nmin_plot = auto_nmin
+    else:
+        nmin_plot = nmin
+    if nmax is None:
+        nmax_plot = auto_nmax
+    else:
+        nmax_plot = nmax
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # pcolormesh: X = xedges (S_0), Y = yedges (S_r), H.T per (Y,X)
+    pcm = ax.pcolormesh(xedges, yedges, H.T,
+                        cmap="Spectral_r", shading="auto",
+                        vmin=nmin_plot, vmax=nmax_plot)
+
+    ax.set_xlabel(r"Mean $S_0$")
+    ax.set_ylabel(r"Range $S_r$")
+    ax.set_title("Matrice rainflow – mappa 2D")
+
+    # ticks X/Y
+    if tick_S0 is not None and tick_S0 > 0.0:
+        xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
+        ax.set_xticks(xticks)
+    else:
+        ax.set_xticks(S_0_bins)
+
+    if tick_Sr is not None and tick_Sr > 0.0:
+        yticks = np.arange(sr_min, sr_max + tick_Sr, tick_Sr)
+        ax.set_yticks(yticks)
+    else:
+        ax.set_yticks(S_r_bins)
+
+    ax.set_xlim(s0_min, s0_max)
+    ax.set_ylim(sr_min, sr_max)
+
+    cbar = fig.colorbar(pcm, ax=ax)
+    cbar.set_label(r"n (reversals)")
+
+    if tick_n is not None and tick_n > 0.0:
+        nticks = np.arange(nmin_plot, nmax_plot + tick_n, tick_n)
+        cbar.set_ticks(nticks)
+
+    ax.grid(True, linestyle=":", linewidth=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
 
 # Funzione per mostrare la tabella GUI dei risultati Rainflow
 def mostra_tabella(S_r, S_0, n_i):

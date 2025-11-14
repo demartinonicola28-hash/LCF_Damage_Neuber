@@ -39,7 +39,7 @@ def export_fatica(
     epsilon_re_p: Iterable[float] | None = None,
     # Vita e danno
     N_f: Iterable[float] | None = None,
-    D_ni: Iterable[float] | None = None,
+    D_ni_d: Iterable[float] | None = None,
     D_tot: float | None = None,
     n_tot: float | None = None,
     # Parametri
@@ -79,8 +79,8 @@ def export_fatica(
             epsilon_re_el=epsilon_re_el, epsilon_re=epsilon_re, epsilon_re_p=epsilon_re_p
         ))
 
-    if any(v is not None for v in (N_f, D_ni)):
-        sheets["fatigue_damage"] = pd.DataFrame(_series_dict(N_f=N_f, D_ni=D_ni))
+    if any(v is not None for v in (N_f, D_ni_d)):
+        sheets["fatigue_damage"] = pd.DataFrame(_series_dict(N_f=N_f, D_ni_d=D_ni_d))
 
     # Parametri e scalari
     params = params or {}
@@ -119,6 +119,6 @@ if __name__ == "__main__":
                          sigma_r=[100,80], sigma_p=[120,90], sigma_0=[60,45],
                          sigma_a=[50,40], sigma_re=[55,44],
                          epsilon_re_el=[2e-4, 1.8e-4], epsilon_re=[3e-4, 2.5e-4], epsilon_re_p=[1e-4, 7e-5],
-                         N_f=[1e6, 2e6], D_ni=[1e-6, 5e-7], D_tot=0.12, n_tot=1.0,
+                         N_f=[1e6, 2e6], D_ni_d=[1e-6, 5e-7], D_tot=0.12, n_tot=1.0,
                          params={"E": 2.1e11, "K'": 900e6, "n'": 0.2})
     print("Scritto:", xlsx)

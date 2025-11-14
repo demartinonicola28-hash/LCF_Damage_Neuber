@@ -7,13 +7,13 @@ import numpy as np
 
 from signal_rainflow.carica_dati import App  # Importa la GUI
 from signal_rainflow.S_t import calcola_S, plot_S_t, calcola_S_p, plot_S_p_step  # Importa calcola_S e plot_S_t da S_t.py
-from signal_rainflow.rainflow import rainflow_counting, plot_rainflow, mostra_tabella, salva_rainflow  # Importa le funzioni Rainflow da rainflow.py
+from signal_rainflow.rainflow import rainflow_counting, plot_rainflow_3d, plot_rainflow_map, mostra_tabella, salva_rainflow  # Importa le funzioni Rainflow da rainflow.py
 from ISO19902.parameters import ask_parameters
 from ISO19902.neuber import calcola_sigma_p, calcola_sigma_r
 #from ISO19902.ramberg_osgood import ramberg_osgood_amplitude, ramberg_osgood_range
 from ISO19902.stress_strain_re import calcola_sigma_re, calcola_epsilon_re, plot_ramberg_osgood
 from ISO19902.initiation_life import calcola_N_f
-from ISO19902.damage import calcola_D, calcola_n_b
+from ISO19902.damage import calcola_D, calcola_n_b, plot_damage_3d, plot_damage_map
 from ISO19902.stress_strain_re import plot_sigma_re, plot_epsilon_re
 from result.result_export import export_fatica
 
@@ -45,7 +45,19 @@ print(f"n_Sp: {len(S_p)}")
 # --- STEP 4: ESEGUI RAINFLOW COUNTING ---
 S_r, S_0, n_i = rainflow_counting(S_p)
 salva_rainflow(S_r, S_0, n_i)  # Salva i risultati usando salva_rainflow da `rainflow.py`
-plot_rainflow(S_r, S_0, n_i)  # Usa plot_rainflow da `rainflow.py`
+
+# 3D con assi di default, ma Z fra 0 e 50 con tick ogni 5
+plot_rainflow_3d(S_r, S_0, n_i,
+                 delta_S_r=50, delta_S_0=5,
+                 tick_Sr=200, tick_S0=20,
+                 zmin=0, zmax=10, tick_n=2)
+
+# Mappa 2D con stessa discretizzazione e scala colori 0–50
+plot_rainflow_map(S_r, S_0, n_i,
+                 delta_S_r=50, delta_S_0=5,
+                 tick_Sr=200, tick_S0=20,
+                  nmin=0, nmax=10, tick_n=2)
+
 mostra_tabella(S_r, S_0, n_i)  # Mostra la tabella dei risultati
 
 print(f"Sr: {len(S_r)}")
@@ -121,14 +133,26 @@ print(f"N_f[0:{k}]: {N_f[:k].tolist()}")
 
 
 # --- STEP 9: DANNO TOTALE: MINER'S RULE ---> [D] ---j
-D_tot, D_ni, n_i, n_tot = calcola_D(N_f, n_i, gamma_I, gamma_ov)
+D_tot, D_ni_d, n_i, n_tot = calcola_D(N_f, n_i, gamma_I, gamma_ov)
 print(f"n_i[0:{k}]: {n_i[:k].tolist()}")
-print(f"D_ni[0:{k}]: {D_ni[:k].tolist()}")
+print(f"D_ni[0:{k}]: {D_ni_d[:k].tolist()}")
 print(f"n_tot: {n_tot}")
 print(f"D_tot: {D_tot}")
-n_b, sum_D_ni = calcola_n_b(D_ni, gamma_I, gamma_ov)
+n_b, sum_D_ni = calcola_n_b(D_ni_d, gamma_I, gamma_ov)
 print(f"n_b: {n_b:.1f} blocks")
 print(f"sum_D_ni: {sum_D_ni}")
+
+plot_damage_3d(S_r, S_0, D_ni_d,
+    delta_S_r=200, delta_S_0=10,     # range dell'istogramma
+    tick_Sr=100, tick_S0=10 ,       # range dei valori sugli assi x e y
+    zmin=0.0, zmax=1, tick_D=0.1
+)
+
+plot_damage_map(S_r, S_0, D_ni_d,
+    delta_S_r=100, delta_S_0=10,
+    tick_Sr=200, tick_S0=20,
+    Dmin=0.0, Dmax=1, tick_D=0.1
+)
 
 # --- STEP 10: EXPORT DATA ---
 xlsx_path = export_fatica(
@@ -138,7 +162,7 @@ xlsx_path = export_fatica(
     sigma_r=sigma_r, sigma_p=sigma_p, sigma_0=sigma_0,
     sigma_a=sigma_a, sigma_re=sigma_re,
     epsilon_re_el=epsilon_re_el, epsilon_re=epsilon_re, epsilon_re_p=epsilon_re_p,
-    N_f=N_f, D_ni=D_ni, D_tot=D_tot, n_tot=n_tot,
+    N_f=N_f, D_ni_d=D_ni_d, D_tot=D_tot, n_tot=n_tot,
     params=params,
     outdir="export", xlsx_name="risultati_fatica.xlsx", also_csv=True
 )
