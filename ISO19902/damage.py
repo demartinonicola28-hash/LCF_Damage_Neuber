@@ -164,7 +164,7 @@ def plot_damage_3d(S_r: Sequence[float],
     ax = fig.add_subplot(111, projection="3d")
 
     norm = colors.Normalize(vmin=Dmin_plot, vmax=Dmax_plot)
-    cmap = cm.viridis
+    cmap = cm.Spectral_r
     bar_colors = cmap(norm(dz))
 
     # ordinamento back-to-front
@@ -181,11 +181,16 @@ def plot_damage_3d(S_r: Sequence[float],
             linewidth=0.3,
         )
 
-    ax.set_xlabel(r"Mean $S_0$")
-    ax.set_ylabel(r"Range $S_r$")
-    ax.set_zlabel(r"Danno $D_{ni,d}$")
-    ax.set_title("Istogramma 3D del danno per quadrati (S_r, S_0)")
+    ax.set_xlabel(r"mean stress $S_0$")
+    ax.set_ylabel(r"stress range $S_r$")
+    ax.set_zlabel(r"damage $D_i$")
+    ax.set_title("Damage histogram")
 
+    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="y", labelsize=8)
+    ax.tick_params(axis="z", labelsize=8)  # solo nei 3D
+    ax.zaxis.set_rotate_label(False)   # disattiva rotazione automatica
+    ax.zaxis.label.set_rotation(90)    # ruota dal basso verso l'alto
     # ticks X/Y
     if tick_S0 is not None and tick_S0 > 0.0:
         xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
@@ -200,6 +205,7 @@ def plot_damage_3d(S_r: Sequence[float],
         ax.set_yticks(S_r_bins)
 
     ax.set_xlim(s0_min, s0_max)
+    ax.invert_xaxis()
     ax.set_ylim(sr_min, sr_max)
     ax.set_zlim(Dmin_plot, Dmax_plot)
 
@@ -211,7 +217,7 @@ def plot_damage_3d(S_r: Sequence[float],
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
     mappable.set_array(dz)
     cbar = fig.colorbar(mappable, ax=ax, shrink=0.7)
-    cbar.set_label(r"Danno $D_{ni,d}$")
+    cbar.set_label(r"damage $D_i$")
 
     if tick_D is not None and tick_D > 0.0:
         cbar.set_ticks(zticks)
@@ -304,9 +310,12 @@ def plot_damage_map(S_r: Sequence[float],
                         cmap="Spectral_r", shading="auto",
                         vmin=Dmin_plot, vmax=Dmax_plot)
 
-    ax.set_xlabel(r"Mean $S_0$")
-    ax.set_ylabel(r"Range $S_r$")
-    ax.set_title("Mappa 2D del danno per quadrati (S_r, S_0)")
+    ax.set_xlabel(r"mean stress $S_0$")
+    ax.set_ylabel(r"stress range $S_r$")
+    ax.set_title("Damage map")
+
+    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="y", labelsize=8)
 
     # ticks assi
     if tick_S0 is not None and tick_S0 > 0.0:
@@ -322,10 +331,12 @@ def plot_damage_map(S_r: Sequence[float],
         ax.set_yticks(S_r_bins)
 
     ax.set_xlim(s0_min, s0_max)
+    ax.invert_xaxis()
     ax.set_ylim(sr_min, sr_max)
 
     cbar = fig.colorbar(pcm, ax=ax)
-    cbar.set_label(r"Danno $D_{ni,d}$")
+    cbar.set_label(r"damage $D_i$")
+
 
     if tick_D is not None and tick_D > 0.0:
         Dticks = np.arange(Dmin_plot, Dmax_plot + 0.5 * tick_D, tick_D)

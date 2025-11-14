@@ -181,7 +181,7 @@ def plot_rainflow_3d(S_r: Sequence[float],
         nmin_plot = nmin
 
     if nmax is None:
-        nmax_plot = float(np.ceil(auto_nmax))  # intero per eccesso
+        nmax_plot = float(np.ceil(auto_nmax)+2)  # intero per eccesso
     else:
         nmax_plot = nmax
 
@@ -206,11 +206,16 @@ def plot_rainflow_3d(S_r: Sequence[float],
             linewidth=0.3,
         )
 
-    ax.set_xlabel(r"Mean $S_0$")
-    ax.set_ylabel(r"Range $S_r$")
-    ax.set_zlabel(r"n (reversals)")
-    ax.set_title("Matrice rainflow – istogramma 3D")
+    ax.set_xlabel(r"mean stress $S_0$")
+    ax.set_ylabel(r"stress range $S_r$")
+    ax.set_zlabel(r"reversals $n$")
+    ax.set_title("Rainflow cycle counting result")
 
+    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="y", labelsize=8)
+    ax.tick_params(axis="z", labelsize=8)  # solo nei 3D
+    ax.zaxis.set_rotate_label(False)   # disattiva rotazione automatica
+    ax.zaxis.label.set_rotation(90)    # ruota dal basso verso l'alto
     # ticks X/Y
     if tick_S0 is not None and tick_S0 > 0.0:
         xticks = np.arange(s0_min, s0_max + tick_S0, tick_S0)
@@ -225,6 +230,7 @@ def plot_rainflow_3d(S_r: Sequence[float],
         ax.set_yticks(S_r_bins)
 
     ax.set_xlim(s0_min, s0_max)
+    ax.invert_xaxis()
     ax.set_ylim(sr_min, sr_max)
     ax.set_zlim(nmin_plot, nmax_plot)
 
@@ -238,7 +244,7 @@ def plot_rainflow_3d(S_r: Sequence[float],
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
     mappable.set_array(dz)
     cbar = fig.colorbar(mappable, ax=ax, shrink=0.7)
-    cbar.set_label(r"n (reversals)")
+    cbar.set_label(r"reversals $n$")
 
     if zticks is not None:
         cbar.set_ticks(zticks)
@@ -315,7 +321,7 @@ def plot_rainflow_map(S_r: Sequence[float],
         nmin_plot = nmin
 
     if nmax is None:
-        nmax_plot = float(np.ceil(auto_nmax))
+        nmax_plot = float(np.ceil(auto_nmax)+2)
     else:
         nmax_plot = nmax
 
@@ -325,9 +331,12 @@ def plot_rainflow_map(S_r: Sequence[float],
                         cmap="Spectral_r", shading="auto",
                         vmin=nmin_plot, vmax=nmax_plot)
 
-    ax.set_xlabel(r"Mean $S_0$")
-    ax.set_ylabel(r"Range $S_r$")
-    ax.set_title("Matrice rainflow – mappa 2D")
+    ax.set_xlabel(r"mean stress $S_0$")
+    ax.set_ylabel(r"stress range $S_r$")
+    ax.set_title("Rainflow cycle counting map result")
+
+    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="y", labelsize=8)
 
     # ticks X/Y
     if tick_S0 is not None and tick_S0 > 0.0:
@@ -343,10 +352,11 @@ def plot_rainflow_map(S_r: Sequence[float],
         ax.set_yticks(S_r_bins)
 
     ax.set_xlim(s0_min, s0_max)
+    ax.invert_xaxis()
     ax.set_ylim(sr_min, sr_max)
 
     cbar = fig.colorbar(pcm, ax=ax)
-    cbar.set_label(r"n (reversals)")
+    cbar.set_label(r"reversals $n$")
 
     if tick_n is not None and tick_n > 0.0:
         nticks = np.arange(nmin_plot, nmax_plot + 0.5 * tick_n, tick_n)
@@ -367,7 +377,7 @@ def mostra_tabella(S_r, S_0, n_i):
     """
     # Crea la finestra principale
     window = tk.Tk()
-    window.title("Rainflow Cycle Counting - Tabella")
+    window.title("Rainflow cycle counting number result")
     window.geometry("750x750")
     window.resizable(False, False)          # <-- blocca le frecce/drag
 
