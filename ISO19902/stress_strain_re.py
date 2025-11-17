@@ -46,8 +46,8 @@ def calcola_epsilon_re(E: float, K_prime: float, n_prime: float,
                        sigma_re: List[float]) -> Tuple[List[float], List[float], List[float]]:
     """
     Decomposizione di ε_re in:
-      ε_re_el = σ_a / E              (parte elastica, con σ_a = σ_re)
-      ε_re    = RO(σ_a)              (totale da Ramberg–Osgood in ampiezza)
+      ε_re_el = σ_re / E              (parte elastica, con σ_a = σ_re)
+      ε_re    = RO(σ_re)              (totale da Ramberg–Osgood in ampiezza)
       ε_re_p = ε_re - ε_re_el        (parte plastica)
 
     Ritorna (epsilon_re_el, epsilon_re, epsilon_re_p) come liste.
@@ -60,6 +60,21 @@ def calcola_epsilon_re(E: float, K_prime: float, n_prime: float,
     # parte plastica
     epsilon_re_p = (np.asarray(epsilon_re) - np.asarray(epsilon_re_el)).tolist()
     return epsilon_re_el, epsilon_re, epsilon_re_p
+
+def calcola_epsilon_a(E: float, K_prime: float, n_prime: float,
+                       sigma_a: List[float]) -> Tuple[List[float], List[float], List[float]]:
+    """
+    Decomposizione di ε_re in:
+      ε_a_el = σ_a / E              (parte elastica, con σ_a = σ_re)
+      ε_a    = RO(σ_a)              (totale da Ramberg–Osgood in ampiezza)
+      ε_a_p = ε_a - ε_a_el        (parte plastica)
+
+    Ritorna (epsilon_re_el, epsilon_re, epsilon_re_p) come liste.
+    """
+    import numpy as np
+    # totale con Ramberg–Osgood
+    epsilon_a = ramberg_osgood_amplitude(E, K_prime, n_prime, sigma_a.tolist())
+    return epsilon_a
 
 
 def plot_sigma_re(sigma_re, n_i, sort_desc=True):
@@ -94,7 +109,7 @@ def plot_sigma_re(sigma_re, n_i, sort_desc=True):
 
     plt.figure(figsize=(10, 6))
     plt.gca().set_facecolor('whitesmoke')
-    plt.plot(x, y, color='#0066CC', linewidth=1.5)
+    plt.plot(x, y, color="#00CC0A", linewidth=1.5)
     plt.xlabel(r"Cicli $n_{i}$")
     plt.ylabel(r"$\sigma_{re}$")
     plt.title(r"Spettro per $\sigma_{re}$ ordinati")
@@ -142,7 +157,7 @@ def plot_epsilon_re(epsilon_re, n_i, sort_desc=True):
 
     plt.figure(figsize=(10, 6))
     plt.gca().set_facecolor('whitesmoke')
-    plt.plot(x, y, color='#0066CC', linewidth=1.5)
+    plt.plot(x, y, color="#00CC0A", linewidth=1.5)
     plt.xlabel(r"Cicli $n_{i}$")
     plt.ylabel(r"$\epsilon_{re}$")
     plt.title(r"Spettro per $\epsilon_{re}$ ordinati")
@@ -201,3 +216,90 @@ def plot_ramberg_osgood(E, K_prime, n_prime, sigma_re):
     plt.show()
 
     return s, eps_el, eps_tot, eps_p
+
+
+def plot_sigma_a(sigma_a, n_i, sort_desc=True):
+    v = np.asarray(sigma_a, dtype=float).ravel()
+    n = np.asarray(n_i, dtype=float).ravel()
+    if v.size != n.size:
+        raise ValueError(f"Dimensioni non coerenti: sigma_re={v.size}, n_i={n.size}")
+
+    mask = ~(np.isnan(v) | np.isnan(n)) & (n > 0)
+    v, n = v[mask], n[mask]
+
+    if sort_desc and v.size:
+        order = np.argsort(v)[::-1]
+        v, n = v[order], n[order]
+
+    seq = []
+    sign = +1  # primo valore dopo lo 0 è positivo
+    for val, ni in zip(v, n):
+        k = int(round(2.0 * float(ni)))
+        for _ in range(max(k, 0)):
+            seq.append(sign * float(val))
+            sign *= -1  # alterna ad ogni step
+
+    y = np.array([0.0] + seq, dtype=float)
+    x = np.arange(y.size, dtype=int)
+
+    plt.figure(figsize=(10, 6))
+    plt.gca().set_facecolor('whitesmoke')
+    plt.plot(x, y, color="#CC0000", linewidth=1.5)
+    plt.xlabel(r"Cicli $n_{i}$")
+    plt.ylabel(r"$\sigma_{a}$")
+    plt.title(r"Spettro per $\sigma_{a}$ ordinati")
+    x_min = min(x)
+    x_max = max(x)
+    y_min = np.floor(np.nanmin(y)/100)*100
+    y_max = np.ceil( np.nanmax(y)/100)*100
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
+    plt.tight_layout()
+    plt.grid(True, linestyle=":", linewidth=0.7)
+    plt.savefig("plot/plot_epsilon_re.png", dpi=600)
+    plt.show()
+    return x, y
+
+
+def plot_epsilon_a(epsilon_a, n_i, sort_desc=True):
+    v = np.asarray(epsilon_a, dtype=float).ravel()
+    n = np.asarray(n_i, dtype=float).ravel()
+    if v.size != n.size:
+        raise ValueError(f"Dimensioni non coerenti: epsilon_re={v.size}, n_i={n.size}")
+
+    mask = ~(np.isnan(v) | np.isnan(n)) & (n > 0)
+    v, n = v[mask], n[mask]
+
+    if sort_desc and v.size:
+        order = np.argsort(v)[::-1]
+        v, n = v[order], n[order]
+
+    seq = []
+    sign = +1  # primo valore dopo lo 0 è positivo
+    for val, ni in zip(v, n):
+        k = int(round(2.0 * float(ni)))
+        for _ in range(max(k, 0)):
+            seq.append(sign * float(val))
+            sign *= -1  # alterna ad ogni step
+
+    y = np.array([0.0] + seq, dtype=float)
+    x = np.arange(y.size, dtype=int)
+
+    plt.figure(figsize=(10, 6))
+    plt.gca().set_facecolor('whitesmoke')
+    plt.plot(x, y, color="#CC0000", linewidth=1.5)
+    plt.xlabel(r"Cicli $n_{i}$")
+    plt.ylabel(r"$\epsilon_{a}$")
+    plt.title(r"Spettro per $\epsilon_{a}$ ordinati")
+    x_min = min(x)
+    x_max = max(x)
+    y_min = np.floor(np.nanmin(y)/100)*0.025 if np.nanmax(np.abs(y)) >= 0.02 else np.floor(np.nanmin(y)/0.1)*0.02
+    y_max = np.ceil( np.nanmax(y)/100)*0.025  if np.nanmax(np.abs(y)) >= 0.02 else np.ceil( np.nanmax(y)/0.1)*0.02
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
+    plt.tight_layout()
+    plt.grid(True, linestyle=":", linewidth=0.7)
+    plt.savefig("plot/plot_epsilon_a.png", dpi=600)
+    plt.show()
+    return x, y
+

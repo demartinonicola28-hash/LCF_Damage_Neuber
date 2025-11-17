@@ -21,8 +21,8 @@ def calcola_S(VM, P11, P22):
     segni = segno_traccia(P11, P22)
     return [vm * segno for vm, segno in zip(VM, segni)]
 
-# Funzione per trovare i punti di inversione (reversal points)
-def reversals(series, left=False, right=False):
+# Funzione per trovare i punti di inversione (cycles points)
+def cycles(series, left=False, right=False):
     """Itera sui punti di inversione nella serie"""
     series = iter(series)
     x_last, x = next(series), next(series)
@@ -45,7 +45,7 @@ def reversals(series, left=False, right=False):
 def extract_cycles(series, left=False, right=False):
     """Estrai i cicli dalla serie"""
     points = deque()
-    for x in reversals(series, left=left, right=right):
+    for x in cycles(series, left=left, right=right):
         points.append(x)
         while len(points) >= 3:
             X = abs(points[-2] - points[-1])
@@ -208,7 +208,7 @@ def plot_rainflow_3d(S_r: Sequence[float],
 
     ax.set_xlabel(r"mean stress $S_0$")
     ax.set_ylabel(r"stress range $S_r$")
-    ax.set_zlabel(r"reversals $n$")
+    ax.set_zlabel(r"cycles $n$")
     ax.set_title("Rainflow cycle counting result")
 
     ax.tick_params(axis="x", labelsize=8)
@@ -244,7 +244,7 @@ def plot_rainflow_3d(S_r: Sequence[float],
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
     mappable.set_array(dz)
     cbar = fig.colorbar(mappable, ax=ax, shrink=0.7)
-    cbar.set_label(r"reversals $n$")
+    cbar.set_label(r"cycles $n$")
 
     if zticks is not None:
         cbar.set_ticks(zticks)
@@ -356,7 +356,7 @@ def plot_rainflow_map(S_r: Sequence[float],
     ax.set_ylim(sr_min, sr_max)
 
     cbar = fig.colorbar(pcm, ax=ax)
-    cbar.set_label(r"reversals $n$")
+    cbar.set_label(r"cycles $n$")
 
     if tick_n is not None and tick_n > 0.0:
         nticks = np.arange(nmin_plot, nmax_plot + 0.5 * tick_n, tick_n)
@@ -372,7 +372,7 @@ def plot_rainflow_map(S_r: Sequence[float],
 def mostra_tabella(S_r, S_0, n_i):
     """
     Crea e visualizza una finestra GUI che mostra la tabella dei risultati Rainflow
-    con le colonne: n Reversals, S_r Stress Range, S_0 Mean Stress, aggiungendo una 
+    con le colonne: n cycles, S_r Stress Range, S_0 Mean Stress, aggiungendo una 
     barra di scorrimento per navigare tra i dati.
     """
     # Crea la finestra principale
@@ -394,7 +394,7 @@ def mostra_tabella(S_r, S_0, n_i):
     tree.pack(side="left", fill="both", expand=True)
 
     # Definisci le intestazioni delle colonne
-    tree.heading("n", text="n Reversals")
+    tree.heading("n", text="n cycles")
     tree.heading("S_r", text="S_r Stress Range (MPa)")
     tree.heading("S_0", text="S_0 Mean Stress (MPa)")
 
@@ -421,18 +421,18 @@ def mostra_tabella(S_r, S_0, n_i):
 def salva_rainflow(S_r, S_0, n_i, filename="signal_rainflow/n_Sr_S0.txt"):
     """
     Salva i valori di n, S_r e S_0 in un file di testo.
-    Ogni riga contiene i valori n (reversals), S_r (stress range), e S_0 (mean stress).
+    Ogni riga contiene i valori n (cycles), S_r (stress range), e S_0 (mean stress).
     
     Parameters:
         S_r (list): Lista dei valori di S_r (stress range).
         S_0 (list): Lista dei valori di S_0 (mean stress).
-        n_i (list): Lista dei valori di n (numero di reversals).
+        n_i (list): Lista dei valori di n (numero di cycles).
         filename (str): Nome del file in cui salvare i dati (default: "signal_rainflow/n_Sr_S0.txt").
     """
     try:
         with open(filename, "w") as f:
             # Scrivi l'intestazione del file
-            f.write("n Reversals | S_r Stress Range (MPa) | S_0 Mean Stress (MPa)\n")
+            f.write("n cycles | S_r Stress Range (MPa) | S_0 Mean Stress (MPa)\n")
             f.write("-" * 60 + "\n")
             
             # Scrivi i dati

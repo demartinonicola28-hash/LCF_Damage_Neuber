@@ -11,10 +11,10 @@ from signal_rainflow.rainflow import rainflow_counting, plot_rainflow_3d, plot_r
 from ISO19902.parameters import ask_parameters
 from ISO19902.neuber import calcola_sigma_p, calcola_sigma_r
 #from ISO19902.ramberg_osgood import ramberg_osgood_amplitude, ramberg_osgood_range
-from ISO19902.stress_strain_re import calcola_sigma_re, calcola_epsilon_re, plot_ramberg_osgood
+from ISO19902.stress_strain_re import calcola_sigma_re, calcola_epsilon_re, calcola_epsilon_a 
 from ISO19902.initiation_life import calcola_N_f
 from ISO19902.damage import calcola_D, calcola_n_b, plot_damage_3d, plot_damage_map
-from ISO19902.stress_strain_re import plot_sigma_re, plot_epsilon_re
+from ISO19902.stress_strain_re import plot_sigma_a, plot_epsilon_a, plot_sigma_re, plot_epsilon_re, plot_ramberg_osgood
 from result.result_export import export_fatica
 
 
@@ -32,13 +32,13 @@ time, VM, P11, P22 = app.data  # Ottieni i dati da `carica_dati.py`
 # --- STEP 2: CALCOLA IL VETTORE S ---
 # Calcola il vettore S usando la funzione di `S_t.py`
 S = calcola_S(VM, P11, P22)
-#plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
+plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
 print(f"S[0:5]: {S[:5]}")
 
 
 # --- STEP 3: "PULIRE" IL SEGNALE" (picchi e valli) ---
 S_p, step = calcola_S_p(S, time)
-#plot_S_p_step(step, S_p)
+plot_S_p_step(step, S_p)
 print(f"n_Sp: {len(S_p)}")
 
 
@@ -48,8 +48,8 @@ salva_rainflow(S_r, S_0, n_i)  # Salva i risultati usando salva_rainflow da `rai
 
 # 3D con assi di default, ma Z fra 0 e 50 con tick ogni 5
 plot_rainflow_3d(S_r, S_0, n_i,
-                 delta_S_r=50, delta_S_0=5,
-                 tick_Sr=100, tick_S0=10,
+                 delta_S_r=200, delta_S_0=10,
+                 tick_Sr=200, tick_S0=100,
                  nmin=0, nmax=None, tick_n=0.5)
 # Mappa 2D con stessa discretizzazione e scala colori 0–50
 plot_rainflow_map(S_r, S_0, n_i,
@@ -82,7 +82,9 @@ gamma_I = params["gamma_I"]
 gamma_FE = params["gamma_FE"]
 
 if all(value == 1 for value in [
-    params["gamma_M2"], params["gamma_ov"], params["gamma_I"], params["gamma_FE"]
+    params["gamma_M2"],
+    params["gamma_ov"], params["gamma_I"],
+    params["gamma_FE"]
 ]):
     params["gamma_ov"] = 1/1.1
 print("=== Parameters ===")
@@ -104,10 +106,12 @@ print(f"sigma_0[0:5]: {sigma_0[:5]}")
 # --- STEP 7: STRESS & STRAIN FULLY REVERSED CYCLE (R=-1) --->  [sigma_re epsilon_re] ---
 sigma_a, sigma_re = np.array(calcola_sigma_re(sigma_r, sigma_0, sigma_prime_f))
 epsilon_re_el, epsilon_re, epsilon_re_p = calcola_epsilon_re(E, K_prime, n_prime, sigma_re)
+epsilon_a = calcola_epsilon_a(E, K_prime, n_prime, sigma_a)
 
 print("===  Equivalent fully-reversible elasto-plastic ===")
 print("===    stress & strain amplitude at the notch   ===")
 print(f"sigma_a[0:5]: {sigma_a[:5]}")
+print(f"epsilon_a[0:5]: {epsilon_a[:5]}")
 print(f"sigma_re[0:5]: {sigma_re[:5]}")
 print(f"epsilon_re[0:5]: {epsilon_re[:5]}")
 
@@ -115,7 +119,9 @@ print(f"sigma_a: {len(sigma_a)}")
 print(f"sigma_re: {len(sigma_re)}")
 print(f"epsilon_re: {len(epsilon_re)}")
 
-#plot_sigma_re(sigma_re, n_i, sort_desc=True)
+plot_sigma_a(sigma_a, n_i, sort_desc=True)
+plot_epsilon_a(epsilon_a, n_i, sort_desc=True)
+plot_sigma_re(sigma_re, n_i, sort_desc=True)
 #plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
 #plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
 
@@ -159,7 +165,7 @@ xlsx_path = export_fatica(
     S_r=S_r, S_0=S_0, n_i=n_i,
     sigma_r=sigma_r, sigma_p=sigma_p, sigma_0=sigma_0,
     sigma_a=sigma_a, sigma_re=sigma_re,
-    epsilon_re_el=epsilon_re_el, epsilon_re=epsilon_re, epsilon_re_p=epsilon_re_p,
+    epsilon_a=epsilon_a, epsilon_re=epsilon_re,
     N_f=N_f, D_ni_d=D_ni_d, D_tot=D_tot, n_tot=n_tot,
     params=params,
     outdir="export", xlsx_name="risultati_fatica.xlsx", also_csv=True

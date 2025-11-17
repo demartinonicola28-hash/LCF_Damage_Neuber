@@ -34,9 +34,8 @@ def export_fatica(
     # Ampiezze e strain
     sigma_a: Iterable[float] | None = None,
     sigma_re: Iterable[float] | None = None,
-    epsilon_re_el: Iterable[float] | None = None,
+    epsilon_a: Iterable[float] | None = None,
     epsilon_re: Iterable[float] | None = None,
-    epsilon_re_p: Iterable[float] | None = None,
     # Vita e danno
     N_f: Iterable[float] | None = None,
     D_ni_d: Iterable[float] | None = None,
@@ -73,10 +72,10 @@ def export_fatica(
     if any(v is not None for v in (sigma_r, sigma_p, sigma_0)):
         sheets["neuber"] = pd.DataFrame(_series_dict(sigma_r=sigma_r, sigma_p=sigma_p, sigma_0=sigma_0))
 
-    if any(v is not None for v in (sigma_a, sigma_re, epsilon_re_el, epsilon_re, epsilon_re_p)):
+    if any(v is not None for v in (sigma_a, sigma_re, epsilon_a, epsilon_re)):
         sheets["strain_stress"] = pd.DataFrame(_series_dict(
             sigma_a=sigma_a, sigma_re=sigma_re,
-            epsilon_re_el=epsilon_re_el, epsilon_re=epsilon_re, epsilon_re_p=epsilon_re_p
+            epsilon_a=epsilon_a, epsilon_re=epsilon_re
         ))
 
     if any(v is not None for v in (N_f, D_ni_d)):
@@ -118,7 +117,7 @@ if __name__ == "__main__":
                          S_r=[5,4], S_0=[2,1], n_i=[0.5,1.0],
                          sigma_r=[100,80], sigma_p=[120,90], sigma_0=[60,45],
                          sigma_a=[50,40], sigma_re=[55,44],
-                         epsilon_re_el=[2e-4, 1.8e-4], epsilon_re=[3e-4, 2.5e-4], epsilon_re_p=[1e-4, 7e-5],
+                         epsilon_a=[2e-4, 1.8e-4], epsilon_re=[3e-4, 2.5e-4],
                          N_f=[1e6, 2e6], D_ni_d=[1e-6, 5e-7], D_tot=0.12, n_tot=1.0,
                          params={"E": 2.1e11, "K'": 900e6, "n'": 0.2})
     print("Scritto:", xlsx)
