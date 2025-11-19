@@ -122,8 +122,8 @@ print(f"epsilon_re: {len(epsilon_re)}")
 plot_sigma_a(sigma_a, n_i, sort_desc=True)
 plot_epsilon_a(epsilon_a, n_i, sort_desc=True)
 plot_sigma_re(sigma_re, n_i, sort_desc=True)
-#plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
-#plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
+plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
+plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
 
 # --- STEP 8: STRAIN LIFE (SWT) --->  [N_f] ---
 N_f = np.asarray(
