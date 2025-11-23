@@ -210,7 +210,7 @@ def plot_ramberg_osgood(E, K_prime, n_prime, sigma_re):
     plt.ylim(y_min, y_max)
 
     plt.grid(True, linestyle=":", linewidth=0.7)
-    plt.legend(title= "Ramber-Osgood component")
+    plt.legend(title= "Ramber-Osgood strain component")
     plt.tight_layout()
     plt.savefig("plot/plot_ramberg_osgood.png", dpi=600)
     plt.show()

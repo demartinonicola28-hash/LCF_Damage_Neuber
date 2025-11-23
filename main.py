@@ -48,8 +48,8 @@ salva_rainflow(S_r, S_0, n_i)  # Salva i risultati usando salva_rainflow da `rai
 
 # 3D con assi di default, ma Z fra 0 e 50 con tick ogni 5
 plot_rainflow_3d(S_r, S_0, n_i,
-                 delta_S_r=200, delta_S_0=10,
-                 tick_Sr=200, tick_S0=100,
+                 delta_S_r=50, delta_S_0=10,
+                 tick_Sr=100, tick_S0=20,
                  nmin=0, nmax=None, tick_n=0.5)
 # Mappa 2D con stessa discretizzazione e scala colori 0–50
 plot_rainflow_map(S_r, S_0, n_i,
@@ -149,14 +149,14 @@ print(f"D_tot: {D_tot}")
 print(f"n_b: {n_b:.1f} blocks")
 
 plot_damage_3d(S_r, S_0, D_ni_d,
-    delta_S_r=100, delta_S_0=10,        # range dell'istogramma
-    tick_Sr=100, tick_S0=10 ,           # range dei valori sugli assi x e y
-    Dmin=0.0, Dmax=None, tick_D=0.25)
+    delta_S_r=50, delta_S_0=10,        # range dell'istogramma
+    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
+    Dmin=0.0, Dmax=None, tick_D=0.05)
 
 plot_damage_map(S_r, S_0, D_ni_d,
-    delta_S_r=100, delta_S_0=10,        # range dela mappa
-    tick_Sr=100, tick_S0=10 ,           # range dei valori sugli assi x e y
-    Dmin=0.0, Dmax=None, tick_D=0.25)
+    delta_S_r=50, delta_S_0=10,        # range dela mappa
+    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
+    Dmin=0.0, Dmax=None, tick_D=0.05)
 
 # --- STEP 10: EXPORT DATA ---
 xlsx_path = export_fatica(
