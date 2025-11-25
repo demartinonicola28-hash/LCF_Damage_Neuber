@@ -47,7 +47,7 @@ DEFAULTS = {
     "c": -0.58,
 
     # Fattori parziali
-    "gamma_M2": 1.05,
+    "gamma_M2": 1.25,
     "gamma_ov": 1.25,
     "gamma_I": 1.2,
     "gamma_FE": 1.05,
