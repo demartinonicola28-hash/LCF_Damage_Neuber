@@ -32,7 +32,7 @@ time, VM, P11, P22 = app.data  # Ottieni i dati da `carica_dati.py`
 # --- STEP 2: CALCOLA IL VETTORE S ---
 # Calcola il vettore S usando la funzione di `S_t.py`
 S = calcola_S(VM, P11, P22)
-plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
+#plot_S_t(time, S)  # Usa plot_S_t da `S_t.py`
 print(f"S[0:5]: {S[:5]}")
 
 
@@ -47,15 +47,15 @@ S_r, S_0, n_i = rainflow_counting(S_p)
 salva_rainflow(S_r, S_0, n_i)  # Salva i risultati usando salva_rainflow da `rainflow.py`
 
 # 3D con assi di default, ma Z fra 0 e 50 con tick ogni 5
-plot_rainflow_3d(S_r, S_0, n_i,
-                 delta_S_r=50, delta_S_0=10,
-                 tick_Sr=100, tick_S0=20,
-                 nmin=0, nmax=None, tick_n=0.5)
+#plot_rainflow_3d(S_r, S_0, n_i,
+#                 delta_S_r=50, delta_S_0=10,
+#                 tick_Sr=100, tick_S0=20,
+#                 nmin=0, nmax=None, tick_n=0.5)
 # Mappa 2D con stessa discretizzazione e scala colori 0–50
-plot_rainflow_map(S_r, S_0, n_i,
-                 delta_S_r=50, delta_S_0=5,
-                 tick_Sr=100, tick_S0=10,
-                  nmin=0, nmax=None, tick_n=0.5)
+#plot_rainflow_map(S_r, S_0, n_i,
+#                 delta_S_r=50, delta_S_0=5,
+#                 tick_Sr=100, tick_S0=10,
+#                  nmin=0, nmax=None, tick_n=0.5)
 
 #mostra_tabella(S_r, S_0, n_i)  # Mostra la tabella dei risultati
 
@@ -119,11 +119,11 @@ print(f"sigma_a: {len(sigma_a)}")
 print(f"sigma_re: {len(sigma_re)}")
 print(f"epsilon_re: {len(epsilon_re)}")
 
-plot_sigma_a(sigma_a, n_i, sort_desc=True)
-plot_epsilon_a(epsilon_a, n_i, sort_desc=True)
-plot_sigma_re(sigma_re, n_i, sort_desc=True)
-plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
-plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
+#plot_sigma_a(sigma_a, n_i, sort_desc=True)
+#plot_epsilon_a(epsilon_a, n_i, sort_desc=True)
+#plot_sigma_re(sigma_re, n_i, sort_desc=True)
+#plot_epsilon_re(epsilon_re, n_i, sort_desc=True)
+#plot_ramberg_osgood(E, K_prime, n_prime, sigma_re)
 
 # --- STEP 8: STRAIN LIFE (SWT) --->  [N_f] ---
 N_f = np.asarray(
@@ -148,15 +148,15 @@ print(f"n_tot: {n_tot}")
 print(f"D_tot: {D_tot}")
 print(f"n_b: {n_b:.1f} blocks")
 
-plot_damage_3d(S_r, S_0, D_ni_d,
-    delta_S_r=50, delta_S_0=10,        # range dell'istogramma
-    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
-    Dmin=0.0, Dmax=None, tick_D=0.05)
-
-plot_damage_map(S_r, S_0, D_ni_d,
-    delta_S_r=50, delta_S_0=10,        # range dela mappa
-    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
-    Dmin=0.0, Dmax=None, tick_D=0.05)
+#plot_damage_3d(S_r, S_0, D_ni_d,
+#    delta_S_r=50, delta_S_0=10,        # range dell'istogramma
+#    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
+#    Dmin=0.0, Dmax=None, tick_D=0.05)
+#
+#plot_damage_map(S_r, S_0, D_ni_d,
+#    delta_S_r=50, delta_S_0=10,        # range dela mappa
+#    tick_Sr=100, tick_S0=20 ,           # range dei valori sugli assi x e y
+#    Dmin=0.0, Dmax=None, tick_D=0.05)
 
 # --- STEP 10: EXPORT DATA ---
 xlsx_path = export_fatica(
