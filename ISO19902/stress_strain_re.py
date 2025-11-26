@@ -121,7 +121,7 @@ def plot_sigma_re(sigma_re, n_i, sort_desc=True):
     plt.ylim(y_min, y_max)
     plt.tight_layout()
     plt.grid(True, linestyle=":", linewidth=0.7)
-    plt.savefig("plot/plot_epsilon_re.png", dpi=600)
+    plt.savefig("plot/plot_sigma_re.png", dpi=600)
     plt.show()
     return x, y
 
@@ -256,7 +256,7 @@ def plot_sigma_a(sigma_a, n_i, sort_desc=True):
     plt.ylim(y_min, y_max)
     plt.tight_layout()
     plt.grid(True, linestyle=":", linewidth=0.7)
-    plt.savefig("plot/plot_epsilon_re.png", dpi=600)
+    plt.savefig("plot/plot_sigma_a.png", dpi=600)
     plt.show()
     return x, y
 
